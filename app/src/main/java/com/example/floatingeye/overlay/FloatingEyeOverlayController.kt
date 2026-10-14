@@ -36,6 +36,7 @@ import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Screenshot
 import androidx.compose.material.icons.rounded.Widgets
 import com.example.floatingeye.extensions.model.ActiveExtensionItem
 import androidx.compose.material3.Icon
@@ -616,6 +617,7 @@ private fun OverlayEyeContent(
     val isGesturesActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_GESTURES }?.isActive == true
     val isTasksActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_TASKS }?.isActive == true
     val isDownloaderActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_DOWNLOADER }?.isActive == true
+    val isCaptureActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_CAPTURE }?.isActive == true
     val isFirewallActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_FIREWALL }?.isActive == true && firewallServiceActive
     val firewallRules by firewallRepository.rules.collectAsStateWithLifecycle()
     val notificationRepository = remember { com.example.floatingeye.notifications.NotificationHistoryRepository.getInstance(context) }
@@ -643,6 +645,7 @@ private fun OverlayEyeContent(
         isGesturesActive,
         isTasksActive,
         isDownloaderActive,
+        isCaptureActive,
         isFirewallActive,
         firewallRules.size,
         notifications.size,
@@ -651,6 +654,18 @@ private fun OverlayEyeContent(
         drainTelemetry.currentMa
     ) {
         val list = mutableListOf<ActiveExtensionItem>()
+        // Keep Capture near the front: the orbit intentionally has only eight
+        // slots, so it must not disappear behind less frequently used tools.
+        if (isCaptureActive) {
+            list.add(
+                ActiveExtensionItem(
+                    id = com.example.floatingeye.extensions.repository.ExtensionRepository.ID_CAPTURE,
+                    name = "Capture",
+                    iconKey = "capture",
+                    icon = Icons.Rounded.Screenshot
+                )
+            )
+        }
         if (isFirewallActive) {
             val blockedCount = firewallRules.values.count { it.isAnyBlocked }
             list.add(
@@ -749,7 +764,8 @@ private fun OverlayEyeContent(
             com.example.floatingeye.extensions.repository.ExtensionRepository.ID_GESTURES,
             com.example.floatingeye.extensions.repository.ExtensionRepository.ID_TASKS,
             com.example.floatingeye.extensions.repository.ExtensionRepository.ID_DOWNLOADER,
-            com.example.floatingeye.extensions.repository.ExtensionRepository.ID_FIREWALL
+            com.example.floatingeye.extensions.repository.ExtensionRepository.ID_FIREWALL,
+            com.example.floatingeye.extensions.repository.ExtensionRepository.ID_CAPTURE
         ) }.forEach { ext ->
             val icon = when (ext.id) {
                 com.example.floatingeye.extensions.repository.ExtensionRepository.ID_APPEARANCE -> Icons.Rounded.Palette

@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.floatingeye.extensions.model.ActiveExtensionItem
+import com.example.floatingeye.extensions.repository.ExtensionRepository
 import com.example.ui.theme.CyanNeonPrimary
 import com.example.ui.theme.SurfaceContainerHigh
 import com.example.ui.theme.SurfaceDark
@@ -78,7 +79,11 @@ fun RadialAppShortcutMenu(
     // Interleave both kinds so they form one balanced orbit, like app icons
     // around a launcher rather than two separate clusters.
     val maxOrbitItems = 8
-    val displayShortcuts = shortcuts.take(maxOrbitItems)
+    // Reserve one of the eight orbit positions for Capture when enabled, so it
+    // remains reachable even if the user already has eight app shortcuts.
+    val captureItem = activeExtensions.firstOrNull { it.id == ExtensionRepository.ID_CAPTURE }
+    val shortcutLimit = if (captureItem != null) maxOrbitItems - 1 else maxOrbitItems
+    val displayShortcuts = shortcuts.take(shortcutLimit)
     val displayExtensions = activeExtensions.take((maxOrbitItems - displayShortcuts.size).coerceAtLeast(0))
     val shortcutCount = displayShortcuts.size
     val extensionCount = displayExtensions.size
@@ -107,8 +112,15 @@ fun RadialAppShortcutMenu(
         }
     }
 
-    val radialDistanceDp = 96.dp
-    val extRadialDistanceDp = 96.dp
+    // Eight 50–54dp launch targets need at least ~80dp between centers.
+    // Keep the radius inside the 280dp overlay window so the outer icons and
+    // their badges remain visible even at the maximum item count.
+    val orbitRadius = when {
+        totalIconCount >= 7 -> 108.dp
+        totalIconCount >= 5 -> 96.dp
+        totalIconCount >= 3 -> 84.dp
+        else -> 76.dp
+    }
 
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         // 1. App Shortcuts Orbiting Arc
@@ -125,7 +137,7 @@ fun RadialAppShortcutMenu(
                 label = "radial_anim_$index"
             )
 
-            val currentDistanceDp = radialDistanceDp * animFactor
+            val currentDistanceDp = orbitRadius * animFactor
             val offsetX = (currentDistanceDp.value * cos(angleRad)).dp
             val offsetY = (currentDistanceDp.value * sin(angleRad)).dp
 
@@ -159,7 +171,7 @@ fun RadialAppShortcutMenu(
                 label = "radial_ext_anim_${extItem.id}"
             )
 
-            val currentDistanceDp = extRadialDistanceDp * animFactor
+            val currentDistanceDp = orbitRadius * animFactor
             val offsetX = (currentDistanceDp.value * cos(angleRad)).dp
             val offsetY = (currentDistanceDp.value * sin(angleRad)).dp
 
@@ -180,62 +192,9 @@ fun RadialAppShortcutMenu(
             }
         }
 
-        // Fallback standalone Mic if not in activeExtensions list
-        if (onToggleMic != null && activeExtensions.none { it.id == "ext_bluetooth_mic" }) {
-            val micAngleRad = Math.toRadians(if (isNearLeft) -35.0 else if (isNearRight) 215.0 else -90.0)
-            val micAnimFactor by animateFloatAsState(
-                targetValue = if (isOpen) 1f else 0f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMedium
-                ),
-                label = "radial_mic_anim"
-            )
-            val micDistanceDp = 76.dp * micAnimFactor
-            val micOffsetX = (micDistanceDp.value * cos(micAngleRad)).dp
-            val micOffsetY = (micDistanceDp.value * sin(micAngleRad)).dp
-
-            AnimatedVisibility(
-                visible = isOpen,
-                enter = scaleIn(initialScale = 0.2f) + fadeIn(),
-                exit = scaleOut(targetScale = 0.2f) + fadeOut()
-            ) {
-                RadialMicButtonItem(
-                    isPlaying = isMicPlaying,
-                    audioLevel = micAudioLevel,
-                    onClick = onToggleMic,
-                    modifier = Modifier.offset(x = micOffsetX, y = micOffsetY)
-                )
-            }
-        }
-
-        // Fallback standalone Notification Sentinel button if not in activeExtensions list
-        if (onOpenNotifications != null && activeExtensions.none { it.id == "ext_notifications" }) {
-            val notifAngleRad = Math.toRadians(if (isNearLeft) 115.0 else if (isNearRight) 65.0 else -30.0)
-            val notifAnimFactor by animateFloatAsState(
-                targetValue = if (isOpen) 1f else 0f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMedium
-                ),
-                label = "radial_notif_anim"
-            )
-            val notifDistanceDp = 76.dp * notifAnimFactor
-            val notifOffsetX = (notifDistanceDp.value * cos(notifAngleRad)).dp
-            val notifOffsetY = (notifDistanceDp.value * sin(notifAngleRad)).dp
-
-            AnimatedVisibility(
-                visible = isOpen,
-                enter = scaleIn(initialScale = 0.2f) + fadeIn(),
-                exit = scaleOut(targetScale = 0.2f) + fadeOut()
-            ) {
-                RadialNotificationButtonItem(
-                    count = notificationCount,
-                    onClick = onOpenNotifications,
-                    modifier = Modifier.offset(x = notifOffsetX, y = notifOffsetY)
-                )
-            }
-        }
+        // Mic and notifications are already ordinary ActiveExtensionItems in
+        // the same capped list. Rendering fallback buttons here used to add
+        // duplicate icons outside the eight-item limit.
     }
 }
 

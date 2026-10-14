@@ -73,7 +73,13 @@ class HirisCaptureService : Service() {
             mediaProjection.registerCallback(object : MediaProjection.Callback() {
                 override fun onStop() { stopCapture() }
             }, mainHandler)
-            if (mode == MODE_RECORD) startRecording(mediaProjection) else takeScreenshot(mediaProjection)
+            try {
+                if (mode == MODE_RECORD) startRecording(mediaProjection)
+                else takeScreenshot(mediaProjection, intent.getStringExtra(EXTRA_AREA_MODE) ?: AREA_FULL)
+            } catch (error: Exception) {
+                android.widget.Toast.makeText(this, "Hiris Capture could not start: ${error.localizedMessage ?: "unknown error"}", android.widget.Toast.LENGTH_LONG).show()
+                stopCapture()
+            }
         }, 500L)
     }
 
@@ -84,7 +90,7 @@ class HirisCaptureService : Service() {
         return metrics.widthPixels to metrics.heightPixels
     }
 
-    private fun takeScreenshot(mediaProjection: MediaProjection) {
+    private fun takeScreenshot(mediaProjection: MediaProjection, areaMode: String) {
         val (width, height) = screenSize()
         val imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
         reader = imageReader
@@ -104,19 +110,46 @@ class HirisCaptureService : Service() {
                 )
                 bitmap.copyPixelsFromBuffer(buffer)
                 val cropped = android.graphics.Bitmap.createBitmap(bitmap, 0, 0, width, height)
-                val values = ContentValues().apply {
-                    put(MediaStore.Images.Media.DISPLAY_NAME, "Hiris_${timestamp()}.png")
-                    put(MediaStore.Images.Media.MIME_TYPE, "image/png")
-                    if (Build.VERSION.SDK_INT >= 29) put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Hiris Capture")
-                }
-                contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)?.let { uri ->
-                    contentResolver.openOutputStream(uri)?.use { cropped.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                if (areaMode == AREA_RECTANGLE) {
+                    val pendingImage = File(cacheDir, "hiris_selection_${timestamp()}.png")
+                    FileOutputStream(pendingImage).use { cropped.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                    postSelectionNotification(pendingImage)
+                } else {
+                    saveScreenshot(cropped)
                 }
                 if (cropped !== bitmap) cropped.recycle()
                 bitmap.recycle()
             } finally { image.close(); stopCapture() }
         }, mainHandler)
         mainHandler.postDelayed({ imageReader.acquireLatestImage()?.close() }, 1200L)
+    }
+
+    private fun saveScreenshot(bitmap: android.graphics.Bitmap) {
+        val values = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, "Hiris_${timestamp()}.png")
+            put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+            if (Build.VERSION.SDK_INT >= 29) put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Hiris Capture")
+        }
+        contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)?.let { uri ->
+            contentResolver.openOutputStream(uri)?.use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        }
+    }
+
+    private fun postSelectionNotification(image: File) {
+        val openEditor = android.app.PendingIntent.getActivity(
+            this, 7,
+            Intent(this, HirisCaptureSelectionActivity::class.java).putExtra(EXTRA_IMAGE_PATH, image.absolutePath),
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle("Hiris Capture")
+            .setContentText("Tap to draw the screenshot area to save")
+            .setContentIntent(openEditor)
+            .setAutoCancel(true)
+            .setTimeoutAfter(180_000L)
+            .build()
+        (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).notify(SELECTION_NOTIFICATION_ID, notification)
     }
 
     private fun startRecording(mediaProjection: MediaProjection) {
@@ -224,17 +257,23 @@ class HirisCaptureService : Service() {
         const val EXTRA_RESULT_CODE = "result_code"
         const val EXTRA_RESULT_DATA = "result_data"
         const val EXTRA_MODE = "capture_mode"
+        const val EXTRA_AREA_MODE = "capture_area_mode"
+        const val EXTRA_IMAGE_PATH = "capture_image_path"
         const val MODE_SCREENSHOT = "screenshot"
         const val MODE_RECORD = "record"
+        const val AREA_FULL = "full"
+        const val AREA_RECTANGLE = "rectangle"
         private const val CHANNEL_ID = "hiris_capture_channel"
         private const val NOTIFICATION_ID = 7091
+        private const val SELECTION_NOTIFICATION_ID = 7092
 
-        fun start(context: Context, resultCode: Int, resultData: Intent, mode: String) {
+        fun start(context: Context, resultCode: Int, resultData: Intent, mode: String, areaMode: String) {
             val intent = Intent(context, HirisCaptureService::class.java).apply {
                 action = ACTION_START
                 putExtra(EXTRA_RESULT_CODE, resultCode)
                 putExtra(EXTRA_RESULT_DATA, resultData)
                 putExtra(EXTRA_MODE, mode)
+                putExtra(EXTRA_AREA_MODE, areaMode)
             }
             if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent) else context.startService(intent)
         }

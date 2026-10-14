@@ -20,10 +20,14 @@ class HirisCaptureConsentActivity : ComponentActivity() {
                 result.resultCode,
                 data,
                 intent.getStringExtra(HirisCaptureService.EXTRA_MODE)
-                    ?: HirisCaptureService.MODE_SCREENSHOT
+                    ?: HirisCaptureService.MODE_SCREENSHOT,
+                intent.getStringExtra(HirisCaptureService.EXTRA_AREA_MODE)
+                    ?: HirisCaptureService.AREA_FULL
             )
+            moveTaskToBack(true)
+        } else {
+            android.widget.Toast.makeText(this, "Screen capture permission was not granted", android.widget.Toast.LENGTH_SHORT).show()
         }
-        moveTaskToBack(true)
         finish()
     }
 
@@ -34,9 +38,10 @@ class HirisCaptureConsentActivity : ComponentActivity() {
     }
 
     companion object {
-        fun launch(context: Context, mode: String) {
+        fun launch(context: Context, mode: String, areaMode: String) {
             context.startActivity(Intent(context, HirisCaptureConsentActivity::class.java).apply {
                 putExtra(HirisCaptureService.EXTRA_MODE, mode)
+                putExtra(HirisCaptureService.EXTRA_AREA_MODE, areaMode)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             })
         }

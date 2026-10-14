@@ -15,6 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -66,6 +68,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -124,8 +127,64 @@ fun CyberTaskManagerCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Header
-            Row(
+            // Keep the action button on its own row on narrow screens or with large system text.
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val compactHeader = maxWidth < 420.dp || LocalDensity.current.fontScale > 1.2f
+                if (compactHeader) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                TaskHeaderIcon()
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Tasks & Reminders",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = "$pendingCount an atant • $completedCount konplete",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = TextSecondary,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                            TestReminderButton(onClick = {
+                                val intent = android.content.Intent(context, com.example.floatingeye.tasks.receiver.TaskReminderReceiver::class.java).apply {
+                                    putExtra(com.example.floatingeye.tasks.receiver.TaskReminderReceiver.EXTRA_TASK_ID, "test_preview")
+                                    putExtra(com.example.floatingeye.tasks.receiver.TaskReminderReceiver.EXTRA_TASK_TITLE, "Tès Sonri & Notifikasyon")
+                                    putExtra(com.example.floatingeye.tasks.receiver.TaskReminderReceiver.EXTRA_TASK_DESC, "Sonri a ap sonnen kounye a!")
+                                }
+                                context.sendBroadcast(intent)
+                                Toast.makeText(context, "Sonri ak notifikasyon deklannche!", Toast.LENGTH_SHORT).show()
+                            })
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            Button(
+                                onClick = { showCreateDialog = true },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = CyanNeonPrimary),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                Icon(Icons.Rounded.Add, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Nouvo tach", color = Color.Black, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                            }
+                        }
+                    }
+                } else Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
@@ -134,20 +193,7 @@ fun CyberTaskManagerCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(CyanNeonPrimary.copy(alpha = 0.15f))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.EventNote,
-                            contentDescription = "Tasks",
-                            tint = CyanNeonPrimary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
+                    TaskHeaderIcon()
                     Column {
                         Text(
                             text = "Tasks & Reminders",
@@ -210,13 +256,16 @@ fun CyberTaskManagerCard(
                     }
                 }
             }
+            }
 
             Spacer(modifier = Modifier.height(14.dp))
 
             // Filter Tabs
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
             ) {
                 FilterChip(
                     selected = filterCompleted == null,
@@ -331,6 +380,36 @@ fun CyberTaskManagerCard(
                     Toast.LENGTH_LONG
                 ).show()
             }
+        )
+    }
+}
+
+@Composable
+private fun TaskHeaderIcon() {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(38.dp)
+            .clip(CircleShape)
+            .background(CyanNeonPrimary.copy(alpha = 0.15f))
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.EventNote,
+            contentDescription = "Tasks",
+            tint = CyanNeonPrimary,
+            modifier = Modifier.size(22.dp)
+        )
+    }
+}
+
+@Composable
+private fun TestReminderButton(onClick: () -> Unit) {
+    IconButton(onClick = onClick, modifier = Modifier.size(40.dp)) {
+        Icon(
+            imageVector = Icons.Rounded.VolumeUp,
+            contentDescription = "Test reminder sound",
+            tint = CyanNeonPrimary,
+            modifier = Modifier.size(20.dp)
         )
     }
 }
