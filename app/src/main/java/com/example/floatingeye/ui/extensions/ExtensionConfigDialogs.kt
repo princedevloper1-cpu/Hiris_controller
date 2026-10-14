@@ -36,10 +36,8 @@ import androidx.compose.material.icons.rounded.MicOff
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.ui.graphics.Brush
-import com.example.floatingeye.downloader.repository.MediaDownloadRepository
 import com.example.floatingeye.notifications.NotificationPermissionHelper
 import com.example.floatingeye.tasks.repository.TaskRepository
-import com.example.floatingeye.ui.downloader.CyberMediaDownloaderCard
 import com.example.floatingeye.ui.tasks.CyberTaskManagerCard
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -110,7 +108,6 @@ fun ExtensionConfigSheet(
     positionManager: FloatingEyePositionManager,
     taskRepository: TaskRepository? = null,
     onReminderRequested: ((CapturedNotification) -> Unit)? = null,
-    mediaDownloadRepository: MediaDownloadRepository? = null,
     onFirewallActiveChanged: (Boolean) -> Unit,
     onRequestFirewallEnable: () -> Unit,
     onAddShortcutClick: () -> Unit,
@@ -125,9 +122,6 @@ fun ExtensionConfigSheet(
             val context = LocalContext.current
             val effectiveTaskRepo = remember(context, taskRepository) {
                 taskRepository ?: TaskRepository.getInstance(context)
-            }
-            val effectiveDownloadRepo = remember(context, mediaDownloadRepository) {
-                mediaDownloadRepository ?: MediaDownloadRepository.getInstance(context)
             }
 
             Column(
@@ -240,13 +234,6 @@ fun ExtensionConfigSheet(
                 ExtensionRepository.ID_TASKS -> {
                     CyberTaskManagerCard(
                         repository = effectiveTaskRepo,
-                        initiallyExpanded = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-                ExtensionRepository.ID_DOWNLOADER -> {
-                    CyberMediaDownloaderCard(
-                        repository = effectiveDownloadRepo,
                         initiallyExpanded = true,
                         modifier = Modifier.fillMaxWidth()
                     )

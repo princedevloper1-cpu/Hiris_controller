@@ -43,10 +43,13 @@ import java.io.File
 /** Lets the user draw a rectangle over the captured screen, then saves only that crop. */
 class HirisCaptureSelectionActivity : ComponentActivity() {
     private var overlayWasRunning = false
+    private var recordingSelection = false
+    private var recordingSelectionHandled = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        overlayWasRunning = com.example.floatingeye.overlay.FloatingEyeOverlayService.isServiceRunning.value
+        overlayWasRunning = intent.getBooleanExtra(HirisCaptureService.EXTRA_RESTORE_OVERLAY, false)
+        recordingSelection = intent.getBooleanExtra(HirisCaptureService.EXTRA_SELECTION_FOR_RECORDING, false)
         if (overlayWasRunning) com.example.floatingeye.overlay.FloatingEyeOverlayService.stop(this)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         val imageFile = intent.getStringExtra(HirisCaptureService.EXTRA_IMAGE_PATH)?.let(::File)
@@ -97,14 +100,30 @@ class HirisCaptureSelectionActivity : ComponentActivity() {
                             Modifier.align(Alignment.TopCenter).fillMaxWidth().background(Color(0xCC101622)).padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text("Draw the area to save", color = Color.White, style = MaterialTheme.typography.titleLarge)
-                            Text("Drag your finger across the screenshot, then tap Save area.", color = Color.LightGray)
+                            Text(
+                                if (recordingSelection) "Draw the area to record" else "Draw the area to save",
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                            Text(
+                                if (recordingSelection) "Drag over the video area, then tap Start recording."
+                                else "Drag your finger across the screenshot, then tap Save area.",
+                                color = Color.LightGray
+                            )
                         }
                         Row(
                             Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(Color(0xDD101622)).padding(16.dp),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Button(onClick = { imageFile.delete(); bitmap.recycle(); finish() }, modifier = Modifier.weight(1f)) {
+                            Button(onClick = {
+                                if (recordingSelection) {
+                                    recordingSelectionHandled = true
+                                    startService(android.content.Intent(this@HirisCaptureSelectionActivity, HirisCaptureService::class.java).setAction(HirisCaptureService.ACTION_STOP))
+                                }
+                                imageFile.delete()
+                                bitmap.recycle()
+                                finish()
+                            }, modifier = Modifier.weight(1f)) {
                                 Text("Cancel")
                             }
                             Button(
@@ -115,6 +134,18 @@ class HirisCaptureSelectionActivity : ComponentActivity() {
                                     val y1 = ((rect.top - top) / scale).toInt().coerceIn(0, bitmap.height - 1)
                                     val x2 = ((rect.right - left) / scale).toInt().coerceIn(x1 + 1, bitmap.width)
                                     val y2 = ((rect.bottom - top) / scale).toInt().coerceIn(y1 + 1, bitmap.height)
+                                    if (recordingSelection) {
+                                        recordingSelectionHandled = true
+                                        HirisCaptureService.startRecordingArea(
+                                            this@HirisCaptureSelectionActivity,
+                                            x1, y1, x2, y2, bitmap.width, bitmap.height
+                                        )
+                                        imageFile.delete()
+                                        bitmap.recycle()
+                                        Toast.makeText(this@HirisCaptureSelectionActivity, "Recording selected area", Toast.LENGTH_SHORT).show()
+                                        finish()
+                                        return@Button
+                                    }
                                     val crop = Bitmap.createBitmap(bitmap, x1, y1, x2 - x1, y2 - y1)
                                     val values = ContentValues().apply {
                                         put(MediaStore.Images.Media.DISPLAY_NAME, "Hiris_crop_${System.currentTimeMillis()}.png")
@@ -132,7 +163,7 @@ class HirisCaptureSelectionActivity : ComponentActivity() {
                                     finish()
                                 },
                                 modifier = Modifier.weight(1f)
-                            ) { Text("Save area") }
+                            ) { Text(if (recordingSelection) "Start recording" else "Save area") }
                         }
                     }
                 }
@@ -141,6 +172,9 @@ class HirisCaptureSelectionActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        if (recordingSelection && !recordingSelectionHandled) {
+            startService(android.content.Intent(this, HirisCaptureService::class.java).setAction(HirisCaptureService.ACTION_STOP))
+        }
         if (overlayWasRunning && !com.example.floatingeye.overlay.FloatingEyeOverlayService.isServiceRunning.value) {
             com.example.floatingeye.overlay.FloatingEyeOverlayService.start(this)
         }

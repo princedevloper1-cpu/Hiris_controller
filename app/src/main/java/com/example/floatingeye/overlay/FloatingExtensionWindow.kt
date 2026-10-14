@@ -40,7 +40,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.floatingeye.battery.BatterySettingsRepository
 import com.example.floatingeye.battery.FloatingEyeBatteryController
-import com.example.floatingeye.downloader.repository.MediaDownloadRepository
 import com.example.floatingeye.extensions.repository.ExtensionRepository
 import com.example.floatingeye.notifications.NotificationHistoryRepository
 import com.example.floatingeye.overlay.FloatingEyePositionManager
@@ -59,7 +58,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.example.floatingeye.ui.CyberBluetoothMicCard
 import com.example.floatingeye.ui.CyberNotificationHistoryCard
-import com.example.floatingeye.ui.downloader.CyberMediaDownloaderCard
 import com.example.floatingeye.ui.tasks.CyberTaskManagerCard
 import com.example.floatingeye.ui.extensions.AppearanceExtensionSettings
 import com.example.ui.theme.CyanNeonPrimary
@@ -68,7 +66,7 @@ import com.example.ui.theme.TextSecondary
 
 /**
  * High-End Floating In-Screen Window for any active extension clicked from the Floating Eye.
- * Allows the user to use Tasks, Media Downloader, Notifications, etc. directly in place
+ * Allows the user to use Tasks, Notifications, and other extensions directly in place
  * over any app or home screen WITHOUT leaving their current context or launching MainActivity.
  */
 @Composable
@@ -78,9 +76,9 @@ fun FloatingExtensionWindow(
     onMinimizedChanged: (Boolean) -> Unit,
     onDrag: (Float, Float) -> Unit,
     onOpenFullApp: (String) -> Unit,
+    onFloatingCaptureStart: (mode: String, areaMode: String) -> Unit,
     onSwitchExtension: (String) -> Unit,
     taskRepository: TaskRepository,
-    mediaDownloadRepository: MediaDownloadRepository,
     notificationRepository: NotificationHistoryRepository,
     batterySettingsRepository: BatterySettingsRepository,
     batteryController: FloatingEyeBatteryController,
@@ -101,7 +99,6 @@ fun FloatingExtensionWindow(
     val extensionTitle = when (activeExtensionId) {
         ExtensionRepository.ID_FIREWALL -> "Firewall & App Blocker"
         ExtensionRepository.ID_TASKS -> "Tasks & Reminders"
-        ExtensionRepository.ID_DOWNLOADER -> "Media Downloader"
         ExtensionRepository.ID_CAPTURE -> "Hiris Capture"
         ExtensionRepository.ID_NOTIFICATIONS -> "Notification Sentinel"
         ExtensionRepository.ID_BLUETOOTH_MIC -> "Bluetooth Mic Studio"
@@ -239,7 +236,10 @@ fun FloatingExtensionWindow(
                     val context = androidx.compose.ui.platform.LocalContext.current
                     when (activeExtensionId) {
                         ExtensionRepository.ID_CAPTURE -> {
-                            com.example.floatingeye.capture.HirisCaptureCard(modifier = Modifier.fillMaxWidth())
+                            com.example.floatingeye.capture.HirisCaptureCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                onFloatingCaptureStart = onFloatingCaptureStart
+                            )
                         }
                         ExtensionRepository.ID_FIREWALL -> {
                             val effectiveFirewall = remember(context, firewallRepository) {
@@ -257,13 +257,6 @@ fun FloatingExtensionWindow(
                         ExtensionRepository.ID_TASKS -> {
                             CyberTaskManagerCard(
                                 repository = taskRepository,
-                                initiallyExpanded = true,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                        ExtensionRepository.ID_DOWNLOADER -> {
-                            CyberMediaDownloaderCard(
-                                repository = mediaDownloadRepository,
                                 initiallyExpanded = true,
                                 modifier = Modifier.fillMaxWidth()
                             )

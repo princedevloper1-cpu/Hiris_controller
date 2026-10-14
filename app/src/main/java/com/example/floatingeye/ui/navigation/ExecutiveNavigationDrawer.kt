@@ -28,7 +28,6 @@ import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.ElectricBolt
-import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Security
@@ -424,17 +423,6 @@ fun ExecutiveNavigationDrawerContent(
                 iconTint = Color(0xFF10B981),
                 onClick = {
                     onOpenModuleConfig("firewall")
-                    onCloseDrawer()
-                }
-            )
-
-            DrawerModuleShortcutItem(
-                title = "Media Downloader",
-                subtitle = "MP4 & MP3 direct fetch",
-                icon = Icons.Rounded.FileDownload,
-                iconTint = CyanNeonPrimary,
-                onClick = {
-                    onOpenModuleConfig("media_downloader")
                     onCloseDrawer()
                 }
             )

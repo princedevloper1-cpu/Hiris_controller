@@ -71,13 +71,14 @@
             android:name="com.example.floatingeye.capture.HirisCaptureConsentActivity"
             android:excludeFromRecents="true"
             android:exported="false"
-            android:noHistory="true"
+            android:taskAffinity="com.aistudio.hiriscontroller.uxrvpq.capture"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <activity
             android:name="com.example.floatingeye.capture.HirisCaptureSelectionActivity"
             android:excludeFromRecents="true"
-            android:exported="false" />
+            android:exported="false"
+            android:taskAffinity="com.aistudio.hiriscontroller.uxrvpq.capture" />
 
         <service
             android:name="com.example.floatingeye.notifications.HirisNotificationListenerService"

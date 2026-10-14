@@ -23,7 +23,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.EventNote
 import androidx.compose.material.icons.rounded.Gesture
 import androidx.compose.material.icons.rounded.Mic
@@ -273,7 +272,6 @@ private fun resolveExtensionIcon(iconKey: String): ImageVector {
         "mic" -> Icons.Rounded.Mic
         "notifications" -> Icons.Rounded.NotificationsActive
         "tasks" -> Icons.Rounded.EventNote
-        "download" -> Icons.Rounded.Download
         "firewall" -> Icons.Rounded.Shield
         else -> Icons.Rounded.Widgets
     }

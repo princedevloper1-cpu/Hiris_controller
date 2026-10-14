@@ -28,7 +28,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.EventNote
 import androidx.compose.material.icons.rounded.Gesture
 import androidx.compose.material.icons.rounded.Mic
@@ -616,7 +615,6 @@ private fun OverlayEyeContent(
     val isShortcutsActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_SHORTCUTS }?.isActive == true
     val isGesturesActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_GESTURES }?.isActive == true
     val isTasksActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_TASKS }?.isActive == true
-    val isDownloaderActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_DOWNLOADER }?.isActive == true
     val isCaptureActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_CAPTURE }?.isActive == true
     val isFirewallActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_FIREWALL }?.isActive == true && firewallServiceActive
     val firewallRules by firewallRepository.rules.collectAsStateWithLifecycle()
@@ -625,9 +623,6 @@ private fun OverlayEyeContent(
     val taskRepository = remember { com.example.floatingeye.tasks.repository.TaskRepository.getInstance(context) }
     val taskList by taskRepository.tasks.collectAsStateWithLifecycle()
     val pendingTasksCount = taskList.count { !it.isCompleted }
-    val downloadRepository = remember { com.example.floatingeye.downloader.repository.MediaDownloadRepository.getInstance(context) }
-    val downloadList by downloadRepository.downloads.collectAsStateWithLifecycle()
-    val activeDownloadsCount = downloadList.count { it.status == com.example.floatingeye.downloader.model.DownloadStatus.DOWNLOADING }
 
     // Active in-screen floating extension dialog state
     var activeOverlayExtensionId by remember { mutableStateOf<String?>(null) }
@@ -644,13 +639,11 @@ private fun OverlayEyeContent(
         isShortcutsActive,
         isGesturesActive,
         isTasksActive,
-        isDownloaderActive,
         isCaptureActive,
         isFirewallActive,
         firewallRules.size,
         notifications.size,
         pendingTasksCount,
-        activeDownloadsCount,
         drainTelemetry.currentMa
     ) {
         val list = mutableListOf<ActiveExtensionItem>()
@@ -675,17 +668,6 @@ private fun OverlayEyeContent(
                     iconKey = "firewall",
                     icon = Icons.Rounded.Shield,
                     badgeText = if (blockedCount > 0) "$blockedCount" else "ON"
-                )
-            )
-        }
-        if (isDownloaderActive) {
-            list.add(
-                ActiveExtensionItem(
-                    id = com.example.floatingeye.extensions.repository.ExtensionRepository.ID_DOWNLOADER,
-                    name = "Downloader",
-                    iconKey = "download",
-                    icon = Icons.Rounded.Download,
-                    badgeText = if (activeDownloadsCount > 0) "$activeDownloadsCount" else null
                 )
             )
         }
@@ -763,7 +745,6 @@ private fun OverlayEyeContent(
             com.example.floatingeye.extensions.repository.ExtensionRepository.ID_DRAIN_MONITOR,
             com.example.floatingeye.extensions.repository.ExtensionRepository.ID_GESTURES,
             com.example.floatingeye.extensions.repository.ExtensionRepository.ID_TASKS,
-            com.example.floatingeye.extensions.repository.ExtensionRepository.ID_DOWNLOADER,
             com.example.floatingeye.extensions.repository.ExtensionRepository.ID_FIREWALL,
             com.example.floatingeye.extensions.repository.ExtensionRepository.ID_CAPTURE
         ) }.forEach { ext ->
@@ -833,9 +814,14 @@ private fun OverlayEyeContent(
                 }
                 context.startActivity(intent)
             },
+            onFloatingCaptureStart = { mode, areaMode ->
+                activeOverlayExtensionId = null
+                isOverlayPanelMinimized = false
+                onCollapseFullScreen()
+                com.example.floatingeye.capture.HirisCaptureConsentActivity.launch(context, mode, areaMode)
+            },
             onSwitchExtension = { extId -> activeOverlayExtensionId = extId },
             taskRepository = taskRepository,
-            mediaDownloadRepository = downloadRepository,
             notificationRepository = notificationRepository,
             batterySettingsRepository = batteryController.settingsRepository,
             batteryController = batteryController,

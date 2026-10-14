@@ -96,15 +96,6 @@ class ExtensionRepository(
             isActive = false // OFF by default; user flips switch to activate
         ),
         HirisExtension(
-            id = ID_DOWNLOADER,
-            name = "Media Downloader",
-            description = "Download videos & audio with direct links rapidly.",
-            categoryTags = listOf("Media", "Video", "Audio", "Downloader"),
-            category = ExtensionCategory.UTILITIES,
-            iconKey = "download",
-            isActive = false // OFF by default; user flips switch to activate
-        ),
-        HirisExtension(
             id = ID_CAPTURE,
             name = "Hiris Capture",
             description = "Capture screenshots and record the screen with Android screen-capture permission.",
@@ -191,7 +182,6 @@ class ExtensionRepository(
         const val ID_BLUETOOTH_MIC = "mic"
         const val ID_NOTIFICATIONS = "notifications"
         const val ID_TASKS = "tasks"
-        const val ID_DOWNLOADER = "downloader"
         const val ID_CAPTURE = "hiris_capture"
         const val ID_FIREWALL = "firewall"
     }

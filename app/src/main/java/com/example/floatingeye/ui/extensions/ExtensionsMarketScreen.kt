@@ -9,7 +9,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
-import com.example.floatingeye.downloader.repository.MediaDownloadRepository
 import com.example.floatingeye.notifications.NotificationPermissionHelper
 import com.example.floatingeye.tasks.repository.TaskRepository
 import androidx.compose.animation.AnimatedVisibility
@@ -116,7 +115,6 @@ fun ExtensionsMarketScreen(
     positionManager: FloatingEyePositionManager,
     config: FloatingEyeConfig,
     taskRepository: TaskRepository? = null,
-    mediaDownloadRepository: MediaDownloadRepository? = null,
     onRequestFirewallEnable: () -> Unit,
     initialConfigExtensionId: String? = null,
     modifier: Modifier = Modifier
@@ -127,7 +125,6 @@ fun ExtensionsMarketScreen(
     val notificationsList by notificationRepository.notifications.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val effectiveTaskRepo = taskRepository ?: remember { TaskRepository.getInstance(context) }
-    val effectiveDownloadRepo = mediaDownloadRepository ?: remember { MediaDownloadRepository.getInstance(context) }
 
     var selectedFilter by remember { mutableStateOf(ModuleFilter.ALL) }
     var searchQuery by remember { mutableStateOf("") }
@@ -559,10 +556,6 @@ fun ExtensionsMarketScreen(
                                     extensionRepository.toggleActive(extension.id, active)
                                     Toast.makeText(context, if (active) "Tasks & Reminders activated • Mounted to Floating Eye!" else "Tasks deactivated", Toast.LENGTH_SHORT).show()
                                 }
-                                ExtensionRepository.ID_DOWNLOADER -> {
-                                    extensionRepository.toggleActive(extension.id, active)
-                                    Toast.makeText(context, if (active) "Media Downloader activated • Mounted to Floating Eye!" else "Media Downloader deactivated", Toast.LENGTH_SHORT).show()
-                                }
                                 ExtensionRepository.ID_FIREWALL -> {
                                     if (active) {
                                         val prepareIntent = android.net.VpnService.prepare(context)
@@ -622,7 +615,6 @@ fun ExtensionsMarketScreen(
                 )
                 configuringExtension = extensions.firstOrNull { it.id == ExtensionRepository.ID_TASKS }
             },
-            mediaDownloadRepository = effectiveDownloadRepo,
             onFirewallActiveChanged = { active ->
                 extensionRepository.toggleActive(ExtensionRepository.ID_FIREWALL, active)
             },

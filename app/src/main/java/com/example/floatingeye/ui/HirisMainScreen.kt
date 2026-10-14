@@ -80,7 +80,6 @@ fun HirisMainScreen(
     val firewallRepository = remember { FirewallRepository.getInstance(context) }
     val micController = remember { BluetoothMicController.getInstance(context) }
     val taskRepository = remember { com.example.floatingeye.tasks.repository.TaskRepository.getInstance(context) }
-    val mediaDownloadRepository = remember { com.example.floatingeye.downloader.repository.MediaDownloadRepository.getInstance(context) }
 
     DisposableEffect(batteryController) {
         batteryController.startListening()
@@ -204,7 +203,6 @@ fun HirisMainScreen(
                 onOpenModuleConfig = { moduleKey ->
                     val extId = when (moduleKey) {
                         "firewall" -> ExtensionRepository.ID_FIREWALL
-                        "media_downloader" -> ExtensionRepository.ID_DOWNLOADER
                         "tasks_reminders" -> ExtensionRepository.ID_TASKS
                         "power_drain_monitor" -> ExtensionRepository.ID_DRAIN_MONITOR
                         "notification_sentinel" -> ExtensionRepository.ID_NOTIFICATIONS
@@ -289,7 +287,6 @@ fun HirisMainScreen(
                                 positionManager = positionManager,
                                 config = config,
                                 taskRepository = taskRepository,
-                                mediaDownloadRepository = mediaDownloadRepository,
                                 onRequestFirewallEnable = requestFirewallEnable,
                                 initialConfigExtensionId = activeConfigExtensionId
                             )

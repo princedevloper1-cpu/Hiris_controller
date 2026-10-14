@@ -33,7 +33,6 @@ import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.EventNote
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.NetworkCell
@@ -77,7 +76,7 @@ import com.example.ui.theme.TextSecondary
 
 /**
  * Slide-Out Executive Action Panel.
- * Provides instant access to Extensions (Firewall, Downloader, Tasks, Sentinel, Mic)
+ * Provides instant access to Extensions (Firewall, Tasks, Sentinel, Mic)
  * and Pinned App Shortcuts in a refined, professional, dark-glass sidebar.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -99,7 +98,6 @@ fun ExecutiveSlidePanel(
     isMicStreaming: Boolean,
     onToggleMic: () -> Unit,
     pendingTasksCount: Int,
-    activeDownloadsCount: Int,
     notificationCount: Int,
     drainMa: Int,
     onOpenFullApp: () -> Unit,
@@ -272,16 +270,6 @@ fun ExecutiveSlidePanel(
                                 )
                             )
                         }
-                    )
-
-                    // Tool 2: Media Downloader Tile
-                    ExtensionActionTile(
-                        icon = Icons.Rounded.Download,
-                        title = "Media Downloader",
-                        subtitle = if (activeDownloadsCount > 0) "$activeDownloadsCount download(s) in progress" else "Download video & audio from direct links",
-                        badgeText = if (activeDownloadsCount > 0) "$activeDownloadsCount ACTIVE" else null,
-                        badgeColor = CyanNeonPrimary,
-                        onClick = { onExtensionClick(ExtensionRepository.ID_DOWNLOADER) }
                     )
 
                     // Tool 3: Tasks & Smart Alarms Tile

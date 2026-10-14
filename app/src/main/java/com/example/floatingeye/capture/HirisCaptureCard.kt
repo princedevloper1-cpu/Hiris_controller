@@ -25,7 +25,10 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
 @Composable
-fun HirisCaptureCard(modifier: Modifier = Modifier) {
+fun HirisCaptureCard(
+    modifier: Modifier = Modifier,
+    onFloatingCaptureStart: ((mode: String, areaMode: String) -> Unit)? = null
+) {
     val context = LocalContext.current
     var mode by remember { mutableStateOf(HirisCaptureService.MODE_SCREENSHOT) }
     var areaMode by remember { mutableStateOf(HirisCaptureService.AREA_RECTANGLE) }
@@ -57,33 +60,38 @@ fun HirisCaptureCard(modifier: Modifier = Modifier) {
                 if (mode == HirisCaptureService.MODE_RECORD) Button(onClick = {}) { Text("Screen record") }
                 else OutlinedButton(onClick = { mode = HirisCaptureService.MODE_RECORD }) { Text("Screen record") }
             }
-            if (mode == HirisCaptureService.MODE_SCREENSHOT) {
-                Text("Capture area", style = MaterialTheme.typography.titleSmall)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = areaMode == HirisCaptureService.AREA_FULL,
-                        onClick = { areaMode = HirisCaptureService.AREA_FULL },
-                        label = { Text("Full screen") }
-                    )
-                    FilterChip(
-                        selected = areaMode == HirisCaptureService.AREA_RECTANGLE,
-                        onClick = { areaMode = HirisCaptureService.AREA_RECTANGLE },
-                        label = { Text("Select rectangle") }
-                    )
-                }
-                Text(
-                    if (areaMode == HirisCaptureService.AREA_RECTANGLE)
-                        "After capture, tap the Hiris notification to draw and save the area you want."
-                    else "The complete screen will be saved as a screenshot."
+            Text("Capture area", style = MaterialTheme.typography.titleSmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = areaMode == HirisCaptureService.AREA_FULL,
+                    onClick = { areaMode = HirisCaptureService.AREA_FULL },
+                    label = { Text("Full screen") }
                 )
-            } else {
-                Text("Screen recording captures the full screen.")
+                FilterChip(
+                    selected = areaMode == HirisCaptureService.AREA_RECTANGLE,
+                    onClick = { areaMode = HirisCaptureService.AREA_RECTANGLE },
+                    label = { Text("Select rectangle") }
+                )
             }
+            Text(
+                when {
+                    areaMode == HirisCaptureService.AREA_RECTANGLE && mode == HirisCaptureService.MODE_RECORD ->
+                        "Draw the recording area first. The video will contain only that rectangle."
+                    areaMode == HirisCaptureService.AREA_RECTANGLE ->
+                        "After screen permission, draw the area to save."
+                    mode == HirisCaptureService.MODE_RECORD -> "The complete screen will be recorded."
+                    else -> "The complete screen will be saved as a screenshot."
+                }
+            )
             if (countdown > 0) Text("Starting in $countdown…", style = MaterialTheme.typography.headlineMedium)
             Button(
                 enabled = countdown == 0,
                 onClick = {
-                    if (mode == HirisCaptureService.MODE_RECORD) {
+                    if (onFloatingCaptureStart != null) {
+                        // The floating Capture panel must disappear immediately so
+                        // the user can select content in the app underneath it.
+                        onFloatingCaptureStart(mode, areaMode)
+                    } else if (mode == HirisCaptureService.MODE_RECORD) {
                         countdown = 3
                         requestCapture = true
                     } else {
