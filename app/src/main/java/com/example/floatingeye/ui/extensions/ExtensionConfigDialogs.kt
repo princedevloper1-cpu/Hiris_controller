@@ -185,6 +185,9 @@ fun ExtensionConfigSheet(
             Spacer(modifier = Modifier.height(20.dp))
 
             when (extension.id) {
+                ExtensionRepository.ID_CAPTURE -> {
+                    com.example.floatingeye.capture.HirisCaptureCard(modifier = Modifier.fillMaxWidth())
+                }
                 ExtensionRepository.ID_SHORTCUTS -> {
                     ShortcutsConfigContent(
                         shortcutRepository = shortcutRepository,

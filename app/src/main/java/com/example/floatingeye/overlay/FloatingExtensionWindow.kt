@@ -102,6 +102,7 @@ fun FloatingExtensionWindow(
         ExtensionRepository.ID_FIREWALL -> "Firewall & App Blocker"
         ExtensionRepository.ID_TASKS -> "Tasks & Reminders"
         ExtensionRepository.ID_DOWNLOADER -> "Media Downloader"
+        ExtensionRepository.ID_CAPTURE -> "Hiris Capture"
         ExtensionRepository.ID_NOTIFICATIONS -> "Notification Sentinel"
         ExtensionRepository.ID_BLUETOOTH_MIC -> "Bluetooth Mic Studio"
         ExtensionRepository.ID_GESTURES -> "Gesture Settings"
@@ -237,6 +238,9 @@ fun FloatingExtensionWindow(
                 ) {
                     val context = androidx.compose.ui.platform.LocalContext.current
                     when (activeExtensionId) {
+                        ExtensionRepository.ID_CAPTURE -> {
+                            com.example.floatingeye.capture.HirisCaptureCard(modifier = Modifier.fillMaxWidth())
+                        }
                         ExtensionRepository.ID_FIREWALL -> {
                             val effectiveFirewall = remember(context, firewallRepository) {
                                 firewallRepository ?: com.example.floatingeye.firewall.repository.FirewallRepository.getInstance(context)

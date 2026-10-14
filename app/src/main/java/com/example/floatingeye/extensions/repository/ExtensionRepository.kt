@@ -105,6 +105,15 @@ class ExtensionRepository(
             isActive = false // OFF by default; user flips switch to activate
         ),
         HirisExtension(
+            id = ID_CAPTURE,
+            name = "Hiris Capture",
+            description = "Capture screenshots and record the screen with Android screen-capture permission.",
+            categoryTags = listOf("Screen", "Screenshot", "Recording"),
+            category = ExtensionCategory.UTILITIES,
+            iconKey = "capture",
+            isActive = false
+        ),
+        HirisExtension(
             id = ID_FIREWALL,
             name = "Firewall & App Blocker",
             description = "Block mobile data or Wi-Fi for apps like WhatsApp & Facebook to stop background data.",
@@ -183,6 +192,7 @@ class ExtensionRepository(
         const val ID_NOTIFICATIONS = "notifications"
         const val ID_TASKS = "tasks"
         const val ID_DOWNLOADER = "downloader"
+        const val ID_CAPTURE = "hiris_capture"
         const val ID_FIREWALL = "firewall"
     }
 }
