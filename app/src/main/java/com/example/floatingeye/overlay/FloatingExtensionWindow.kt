@@ -59,7 +59,6 @@ import androidx.compose.runtime.setValue
 import com.example.floatingeye.ui.CyberBluetoothMicCard
 import com.example.floatingeye.ui.CyberNotificationHistoryCard
 import com.example.floatingeye.ui.tasks.CyberTaskManagerCard
-import com.example.floatingeye.ui.extensions.AppearanceExtensionSettings
 import com.example.ui.theme.CyanNeonPrimary
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
@@ -105,7 +104,6 @@ fun FloatingExtensionWindow(
         ExtensionRepository.ID_GESTURES -> "Gesture Settings"
         ExtensionRepository.ID_BATTERY -> "Battery Reactions"
         ExtensionRepository.ID_DRAIN_MONITOR -> "Power Drain Monitor"
-        ExtensionRepository.ID_APPEARANCE -> "Appearance Pack"
         else -> "HIRIS Extension"
     }
 
@@ -315,11 +313,6 @@ fun FloatingExtensionWindow(
                             GesturesConfigContent(
                                 gestureRepository = gestureRepository,
                                 onAddGestureClick = { showGestureSetup = true }
-                            )
-                        }
-                        ExtensionRepository.ID_APPEARANCE -> {
-                            AppearanceExtensionSettings(
-                                positionManager = positionManager
                             )
                         }
                         else -> {

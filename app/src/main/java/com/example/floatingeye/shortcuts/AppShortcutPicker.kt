@@ -3,6 +3,7 @@ package com.example.floatingeye.shortcuts
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -49,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.ui.theme.CyanNeonPrimary
 import com.example.ui.theme.CyanPrimaryContainer
@@ -122,6 +124,7 @@ fun DrawableAppIcon(
 fun AppShortcutPicker(
     installedAppsRepository: InstalledAppsRepository,
     selectedShortcuts: List<AppShortcut>,
+    maxSelectable: Int = AppShortcutRepository.MAX_SHORTCUTS,
     onToggleApp: (InstalledAppInfo, Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -174,9 +177,9 @@ fun AppShortcutPicker(
                         color = TextPrimary
                     )
                     Text(
-                        text = "${selectedShortcuts.size} of ${AppShortcutRepository.MAX_SHORTCUTS} shortcuts selected",
+                        text = "${selectedShortcuts.size} of ${maxSelectable.coerceAtMost(AppShortcutRepository.MAX_SHORTCUTS)} app slots available",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (selectedShortcuts.size >= AppShortcutRepository.MAX_SHORTCUTS) CyanNeonPrimary else TextSecondary
+                        color = if (selectedShortcuts.size >= maxSelectable) CyanNeonPrimary else TextSecondary
                     )
                 }
 
@@ -256,7 +259,7 @@ fun AppShortcutPicker(
                 ) {
                     items(filteredApps, key = { it.packageName }) { appInfo ->
                         val isSelected = selectedPackageNames.contains(appInfo.packageName)
-                        val canSelect = isSelected || selectedShortcuts.size < AppShortcutRepository.MAX_SHORTCUTS
+                        val canSelect = isSelected || selectedShortcuts.size < maxSelectable
 
                         AppPickerRow(
                             appInfo = appInfo,
@@ -282,12 +285,23 @@ private fun AppPickerRow(
     canSelect: Boolean,
     onToggle: () -> Unit
 ) {
+    val context = LocalContext.current
     Surface(
         shape = RoundedCornerShape(14.dp),
         color = if (isSelected) CyanPrimaryContainer.copy(alpha = 0.35f) else SurfaceContainerLow,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = canSelect) { onToggle() }
+                            .clickable {
+                                if (canSelect) {
+                                    onToggle()
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "Floating Eye ka montre 8 app ak extension sèlman. Retire youn anvan ou ajoute yon lòt.",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
             .testTag("app_row_${appInfo.packageName}")
     ) {
         Row(

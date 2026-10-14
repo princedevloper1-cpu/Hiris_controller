@@ -736,7 +736,7 @@ private fun OverlayEyeContent(
                 )
             )
         }
-        // Appearance or Orbit if activated
+        // Include any future orbit extension that is not handled above.
         extensions.filter { it.isActive && it.id !in listOf(
             com.example.floatingeye.extensions.repository.ExtensionRepository.ID_SHORTCUTS,
             com.example.floatingeye.extensions.repository.ExtensionRepository.ID_BLUETOOTH_MIC,
@@ -748,16 +748,12 @@ private fun OverlayEyeContent(
             com.example.floatingeye.extensions.repository.ExtensionRepository.ID_FIREWALL,
             com.example.floatingeye.extensions.repository.ExtensionRepository.ID_CAPTURE
         ) }.forEach { ext ->
-            val icon = when (ext.id) {
-                com.example.floatingeye.extensions.repository.ExtensionRepository.ID_APPEARANCE -> Icons.Rounded.Palette
-                else -> Icons.Rounded.Widgets
-            }
             list.add(
                 ActiveExtensionItem(
                     id = ext.id,
                     name = ext.name,
                     iconKey = ext.iconKey,
-                    icon = icon
+                    icon = Icons.Rounded.Widgets
                 )
             )
         }

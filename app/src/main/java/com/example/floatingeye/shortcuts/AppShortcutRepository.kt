@@ -130,7 +130,7 @@ class AppShortcutRepository(private val context: Context) {
         if (current.any { it.packageName == shortcut.packageName }) {
             return false // Already added
         }
-        if (current.size >= MAX_SHORTCUTS) {
+        if (current.size >= MAX_SHORTCUTS || !FloatingIconCapacity.canAddShortcut(context)) {
             return false // Limit reached
         }
 
@@ -169,7 +169,7 @@ class AppShortcutRepository(private val context: Context) {
     }
 
     companion object {
-        const val MAX_SHORTCUTS = 6
+        const val MAX_SHORTCUTS = FloatingIconCapacity.MAX_ITEMS
         private const val PREFS_NAME = "floating_eye_shortcuts_prefs"
         private const val KEY_SHORTCUTS = "selected_app_shortcuts_json"
         private const val KEY_LEGACY_DEFAULTS_MIGRATED = "legacy_auto_seeded_shortcuts_migrated"

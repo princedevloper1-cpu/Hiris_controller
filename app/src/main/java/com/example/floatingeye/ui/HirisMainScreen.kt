@@ -127,12 +127,21 @@ fun HirisMainScreen(
     }
 
     val requestFirewallEnable = {
-        val prepareIntent = VpnService.prepare(context)
-        if (prepareIntent != null) {
-            vpnPermissionLauncher.launch(prepareIntent)
+        if (!extensionRepository.canActivate(ExtensionRepository.ID_FIREWALL)) {
+            Toast.makeText(
+                context,
+                "Floating Eye ka montre 8 app ak extension sèlman. Retire youn anvan ou aktive Firewall.",
+                Toast.LENGTH_LONG
+            ).show()
         } else {
-            extensionRepository.toggleActive(ExtensionRepository.ID_FIREWALL, true)
+            val prepareIntent = VpnService.prepare(context)
+            if (prepareIntent != null) {
+                vpnPermissionLauncher.launch(prepareIntent)
+            } else {
+                extensionRepository.toggleActive(ExtensionRepository.ID_FIREWALL, true)
+            }
         }
+        Unit
     }
 
     LaunchedEffect(firewallVpnRequestId) {
@@ -293,7 +302,8 @@ fun HirisMainScreen(
                         }
                         HirisNavScreen.EYE -> {
                             EyeStudioScreen(
-                                config = config
+                                config = config,
+                                positionManager = positionManager
                             )
                         }
                         HirisNavScreen.PROFILE -> {

@@ -213,9 +213,6 @@ fun ExtensionConfigSheet(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-                ExtensionRepository.ID_APPEARANCE -> {
-                    AppearanceExtensionSettings(positionManager = positionManager)
-                }
                 ExtensionRepository.ID_BLUETOOTH_MIC -> {
                     CyberBluetoothMicCard(
                         micController = micController,
@@ -581,7 +578,7 @@ fun BatteryReactionsConfigContent(
 
 // 4. Appearance Config
 @Composable
-fun AppearanceExtensionSettings(
+fun FloatingEyeAppearanceSettings(
     positionManager: FloatingEyePositionManager
 ) {
     val context = LocalContext.current

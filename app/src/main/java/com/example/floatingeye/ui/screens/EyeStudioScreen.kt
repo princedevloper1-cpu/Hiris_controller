@@ -53,6 +53,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.floatingeye.model.FloatingEyeConfig
+import com.example.floatingeye.overlay.FloatingEyePositionManager
+import com.example.floatingeye.ui.extensions.FloatingEyeAppearanceSettings
 import com.example.floatingeye.ui.FloatingEyePlusWidget
 import com.example.floatingeye.ui.components.HirisOrbIllustration
 import com.example.ui.theme.CyanNeonPrimary
@@ -64,6 +66,7 @@ import com.example.ui.theme.TextTertiary
 @Composable
 fun EyeStudioScreen(
     config: FloatingEyeConfig,
+    positionManager: FloatingEyePositionManager,
     modifier: Modifier = Modifier
 ) {
     var touchX by remember { mutableFloatStateOf(0f) }
@@ -214,6 +217,22 @@ fun EyeStudioScreen(
                         CoordBox(label = "Y", value = "${touchY.toInt()} px")
                         CoordBox(label = "GLOW", value = "${(bloomMultiplier * 100).toInt()}%")
                     }
+                }
+            }
+        }
+
+        // Lighting & Color Customizer
+        item {
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0E1524)),
+                border = BorderStroke(1.dp, Color(0xFF1B273F)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Floating Eye Appearance", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    FloatingEyeAppearanceSettings(positionManager = positionManager)
                 }
             }
         }

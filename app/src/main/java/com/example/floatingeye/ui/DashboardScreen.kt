@@ -1502,14 +1502,18 @@ fun DashboardScreen(
         AppShortcutPicker(
             installedAppsRepository = installedAppsRepository,
             selectedShortcuts = shortcuts,
+            maxSelectable = com.example.floatingeye.shortcuts.FloatingIconCapacity.availableShortcutSlots(context),
             onToggleApp = { appInfo, isSelected ->
                 if (isSelected) {
-                    shortcutRepository.addShortcut(
+                    val added = shortcutRepository.addShortcut(
                         AppShortcut(
                             packageName = appInfo.packageName,
                             displayName = appInfo.displayName
                         )
                     )
+                    if (!added) {
+                        Toast.makeText(context, "Floating Eye ka montre 8 app ak extension sèlman.", Toast.LENGTH_LONG).show()
+                    }
                 } else {
                     shortcutRepository.removeShortcut(appInfo.packageName)
                 }

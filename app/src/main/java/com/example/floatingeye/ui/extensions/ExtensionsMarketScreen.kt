@@ -500,7 +500,15 @@ fun ExtensionsMarketScreen(
                     ExtensionCard(
                         extension = extension,
                         needsAccess = needsAccess,
-                        onToggleActive = { active ->
+                        onToggleActive = toggle@{ active ->
+                            if (active && !extensionRepository.canActivate(extension.id)) {
+                                Toast.makeText(
+                                    context,
+                                    "Floating Eye ka montre 8 app ak extension sèlman. Retire youn anvan ou aktive yon lòt.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                return@toggle
+                            }
                             when (extension.id) {
                                 ExtensionRepository.ID_BLUETOOTH_MIC -> {
                                     if (active) {
@@ -639,14 +647,18 @@ fun ExtensionsMarketScreen(
         AppShortcutPicker(
             installedAppsRepository = installedAppsRepository,
             selectedShortcuts = shortcuts,
+            maxSelectable = com.example.floatingeye.shortcuts.FloatingIconCapacity.availableShortcutSlots(context),
             onToggleApp = { appInfo, isSelected ->
                 if (isSelected) {
-                    shortcutRepository.addShortcut(
+                    val added = shortcutRepository.addShortcut(
                         AppShortcut(
                             packageName = appInfo.packageName,
                             displayName = appInfo.displayName
                         )
                     )
+                    if (!added) {
+                        Toast.makeText(context, "Floating Eye ka montre 8 app ak extension sèlman.", Toast.LENGTH_LONG).show()
+                    }
                 } else {
                     shortcutRepository.removeShortcut(appInfo.packageName)
                 }

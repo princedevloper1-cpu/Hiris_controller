@@ -60,15 +60,6 @@ class ExtensionRepository(
             isActive = false // OFF by default; user flips switch to activate
         ),
         HirisExtension(
-            id = ID_APPEARANCE,
-            name = "Appearance Pack",
-            description = "Set the floating eye size and glow intensity.",
-            categoryTags = listOf("Customization", "Size", "Glow"),
-            category = ExtensionCategory.CUSTOMIZATION,
-            iconKey = "appearance",
-            isActive = false // OFF by default; user flips switch to activate
-        ),
-        HirisExtension(
             id = ID_BLUETOOTH_MIC,
             name = "Bluetooth Mic",
             description = "Live audio loopback & streaming from HIRIS.",
@@ -150,8 +141,13 @@ class ExtensionRepository(
         return ext?.isActive == true
     }
 
-    fun toggleActive(extensionId: String, active: Boolean) {
-        if (_extensions.value.none { it.id == extensionId }) return
+    fun canActivate(extensionId: String): Boolean =
+        isExtensionActive(extensionId) ||
+            com.example.floatingeye.shortcuts.FloatingIconCapacity.canAddExtension(context, extensionId)
+
+    fun toggleActive(extensionId: String, active: Boolean): Boolean {
+        if (_extensions.value.none { it.id == extensionId }) return false
+        if (active && !canActivate(extensionId)) return false
 
         prefs.edit().putBoolean("ext_active_$extensionId", active).apply()
 
@@ -169,6 +165,7 @@ class ExtensionRepository(
                 it.copy(isActive = active)
             } else it
         }
+        return true
     }
 
     companion object {
@@ -178,7 +175,6 @@ class ExtensionRepository(
         const val ID_GESTURES = "gestures"
         const val ID_BATTERY = "battery"
         const val ID_DRAIN_MONITOR = "drain_monitor"
-        const val ID_APPEARANCE = "appearance"
         const val ID_BLUETOOTH_MIC = "mic"
         const val ID_NOTIFICATIONS = "notifications"
         const val ID_TASKS = "tasks"
