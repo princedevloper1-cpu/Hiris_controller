@@ -2,6 +2,7 @@ package com.example.floatingeye.ui.extensions
 
 import android.Manifest
 import android.content.Intent
+import android.net.VpnService
 import android.net.Uri
 import android.provider.Settings
 import android.widget.Toast
@@ -56,6 +57,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -90,15 +92,14 @@ import com.example.floatingeye.shortcuts.AppShortcut
 import com.example.floatingeye.shortcuts.AppShortcutPicker
 import com.example.floatingeye.shortcuts.AppShortcutRepository
 import com.example.floatingeye.shortcuts.InstalledAppsRepository
-import com.example.floatingeye.ui.components.HirisOrbIllustration
 import com.example.ui.theme.CyanNeonPrimary
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import com.example.ui.theme.TextTertiary
 
-enum class MarketTab {
-    INSTALLED,
-    DISCOVER
+enum class ModuleFilter {
+    ALL,
+    ACTIVE
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -128,11 +129,12 @@ fun ExtensionsMarketScreen(
     val effectiveTaskRepo = taskRepository ?: remember { TaskRepository.getInstance(context) }
     val effectiveDownloadRepo = mediaDownloadRepository ?: remember { MediaDownloadRepository.getInstance(context) }
 
-    var selectedTab by remember { mutableStateOf(MarketTab.DISCOVER) }
+    var selectedFilter by remember { mutableStateOf(ModuleFilter.ALL) }
     var searchQuery by remember { mutableStateOf("") }
     var isSearchOpen by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf(ExtensionCategory.ALL) }
     var showFilterChips by remember { mutableStateOf(false) }
+    var permissionCheckVersion by remember { mutableIntStateOf(0) }
 
     // Configuration Sheet State
     var configuringExtension by remember {
@@ -156,20 +158,39 @@ fun ExtensionsMarketScreen(
     var showAppPicker by remember { mutableStateOf(false) }
     var showGestureSetup by remember { mutableStateOf(false) }
 
+    fun startMicStreaming() {
+        if (micController.startStreaming()) {
+            extensionRepository.toggleActive(ExtensionRepository.ID_BLUETOOTH_MIC, true)
+            Toast.makeText(context, "Bluetooth Mic activated (Streaming live audio)", Toast.LENGTH_SHORT).show()
+        } else {
+            extensionRepository.toggleActive(ExtensionRepository.ID_BLUETOOTH_MIC, false)
+            Toast.makeText(context, micController.errorMessage.value ?: "Could not start Bluetooth Mic", Toast.LENGTH_LONG).show()
+        }
+    }
+
     val micPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            if (micController.startStreaming()) {
-                extensionRepository.toggleActive(ExtensionRepository.ID_BLUETOOTH_MIC, true)
-                Toast.makeText(context, "Bluetooth Mic activated (Streaming live audio)", Toast.LENGTH_SHORT).show()
-            } else {
-                extensionRepository.toggleActive(ExtensionRepository.ID_BLUETOOTH_MIC, false)
-                Toast.makeText(context, micController.errorMessage.value ?: "Could not start Bluetooth Mic", Toast.LENGTH_LONG).show()
-            }
+            startMicStreaming()
         } else {
             extensionRepository.toggleActive(ExtensionRepository.ID_BLUETOOTH_MIC, false)
             Toast.makeText(context, "Microphone permission required to activate", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val bluetoothPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            if (!micController.hasRecordPermission()) {
+                micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            } else {
+                startMicStreaming()
+            }
+        } else {
+            extensionRepository.toggleActive(ExtensionRepository.ID_BLUETOOTH_MIC, false)
+            Toast.makeText(context, "Bluetooth access is required for the selected audio route", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -189,6 +210,7 @@ fun ExtensionsMarketScreen(
     DisposableEffect(lifecycleOwner, extensions) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                permissionCheckVersion++
                 val notifExt = extensions.firstOrNull { it.id == ExtensionRepository.ID_NOTIFICATIONS }
                 if (notifExt?.isActive == true) {
                     if (NotificationPermissionHelper.isNotificationAccessGranted(context)) {
@@ -206,12 +228,11 @@ fun ExtensionsMarketScreen(
         }
     }
 
-    // Filter extensions based on tab, category, and search query
-    val filteredExtensions = remember(extensions, selectedTab, selectedCategory, searchQuery) {
+    val filteredExtensions = remember(extensions, selectedFilter, selectedCategory, searchQuery) {
         extensions.filter { ext ->
-            val matchesTab = when (selectedTab) {
-                MarketTab.INSTALLED -> ext.isInstalled
-                MarketTab.DISCOVER -> true // Discover shows all including uninstalled
+            val matchesFilter = when (selectedFilter) {
+                ModuleFilter.ALL -> true
+                ModuleFilter.ACTIVE -> ext.isActive
             }
             val matchesCategory = (selectedCategory == ExtensionCategory.ALL || ext.category == selectedCategory)
             val matchesSearch = searchQuery.isBlank() ||
@@ -219,7 +240,7 @@ fun ExtensionsMarketScreen(
                 ext.description.contains(searchQuery, ignoreCase = true) ||
                 ext.categoryTags.any { it.contains(searchQuery, ignoreCase = true) }
 
-            matchesTab && matchesCategory && matchesSearch
+            matchesFilter && matchesCategory && matchesSearch
         }
     }
 
@@ -324,19 +345,22 @@ fun ExtensionsMarketScreen(
                 }
             }
 
-            // 2. Pill Tab Selector (Installed vs Discover)
+            // 2. Module scope selector
             item {
-                PillTabSelector(
-                    selectedTab = selectedTab,
-                    onSelectTab = { selectedTab = it },
-                    installedCount = extensions.count { it.isInstalled },
-                    discoverCount = extensions.size
+                ModuleFilterSelector(
+                    selectedFilter = selectedFilter,
+                    onSelectFilter = { selectedFilter = it },
+                    moduleCount = extensions.size,
+                    activeCount = extensions.count { it.isActive }
                 )
             }
 
-            // 3. Hero Card: "Extend Your HIRIS"
+            // 3. Module status summary
             item {
-                HeroCard()
+                ModuleSummaryCard(
+                    moduleCount = extensions.size,
+                    activeCount = extensions.count { it.isActive }
+                )
             }
 
             // 3b. Active Extension Live Status Banner (Bluetooth Mic & Notifications)
@@ -454,7 +478,7 @@ fun ExtensionsMarketScreen(
             if (filteredExtensions.isEmpty()) {
                 item {
                     EmptyExtensionsView(
-                        tab = selectedTab,
+                        filter = selectedFilter,
                         searchQuery = searchQuery,
                         onClearSearch = { searchQuery = "" }
                     )
@@ -464,22 +488,34 @@ fun ExtensionsMarketScreen(
                     items = filteredExtensions,
                     key = { it.id }
                 ) { extension ->
+                    val needsAccess = remember(extension.id, permissionCheckVersion) {
+                        when (extension.id) {
+                            ExtensionRepository.ID_BLUETOOTH_MIC ->
+                                !micController.hasRecordPermission() ||
+                                    (micController.selectedOutputRoute.value == com.example.floatingeye.audio.MicOutputRoute.BLUETOOTH &&
+                                        !micController.hasBluetoothConnectPermission())
+                            ExtensionRepository.ID_NOTIFICATIONS ->
+                                !NotificationPermissionHelper.isNotificationAccessGranted(context)
+                            ExtensionRepository.ID_FIREWALL -> VpnService.prepare(context) != null
+                            else -> false
+                        }
+                    }
                     ExtensionCard(
                         extension = extension,
+                        needsAccess = needsAccess,
                         onToggleActive = { active ->
                             when (extension.id) {
                                 ExtensionRepository.ID_BLUETOOTH_MIC -> {
                                     if (active) {
-                                        if (!micController.hasRecordPermission()) {
+                                        if (
+                                            micController.selectedOutputRoute.value == com.example.floatingeye.audio.MicOutputRoute.BLUETOOTH &&
+                                            !micController.hasBluetoothConnectPermission()
+                                        ) {
+                                            bluetoothPermissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
+                                        } else if (!micController.hasRecordPermission()) {
                                             micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                         } else {
-                                            if (micController.startStreaming()) {
-                                                extensionRepository.toggleActive(extension.id, true)
-                                                Toast.makeText(context, "Bluetooth Mic activated (Streaming live audio)", Toast.LENGTH_SHORT).show()
-                                            } else {
-                                                extensionRepository.toggleActive(extension.id, false)
-                                                Toast.makeText(context, micController.errorMessage.value ?: "Could not start Bluetooth Mic", Toast.LENGTH_LONG).show()
-                                            }
+                                            startMicStreaming()
                                         }
                                     } else {
                                         micController.stopStreaming()
@@ -546,10 +582,6 @@ fun ExtensionsMarketScreen(
                                     Toast.makeText(context, "${extension.name} ${if (active) "activated" else "deactivated"}", Toast.LENGTH_SHORT).show()
                                 }
                             }
-                        },
-                        onInstall = {
-                            extensionRepository.installExtension(extension.id)
-                            Toast.makeText(context, "${extension.name} installed! Turn switch ON to activate.", Toast.LENGTH_SHORT).show()
                         },
                         onOpenSettings = {
                             configuringExtension = extension
@@ -674,7 +706,7 @@ private fun HeaderRow(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "Extensions Market",
+                text = "Module Manager",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = 13.5.sp,
                     fontWeight = FontWeight.Medium
@@ -728,17 +760,17 @@ private fun HeaderRow(
 }
 
 @Composable
-private fun PillTabSelector(
-    selectedTab: MarketTab,
-    onSelectTab: (MarketTab) -> Unit,
-    installedCount: Int,
-    discoverCount: Int
+private fun ModuleFilterSelector(
+    selectedFilter: ModuleFilter,
+    onSelectFilter: (ModuleFilter) -> Unit,
+    moduleCount: Int,
+    activeCount: Int
 ) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .height(46.dp)
-            .testTag("market_tab_selector"),
+            .testTag("module_filter_selector"),
         shape = RoundedCornerShape(23.dp),
         color = Color(0xFF0F1420),
         border = BorderStroke(1.dp, Color(0xFF1B2435))
@@ -749,21 +781,21 @@ private fun PillTabSelector(
                 .padding(3.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Tab: Installed
+            // All bundled modules
             TabPillButton(
-                title = "Installed",
-                count = installedCount,
-                isSelected = selectedTab == MarketTab.INSTALLED,
-                onClick = { onSelectTab(MarketTab.INSTALLED) },
+                title = "All modules",
+                count = moduleCount,
+                isSelected = selectedFilter == ModuleFilter.ALL,
+                onClick = { onSelectFilter(ModuleFilter.ALL) },
                 modifier = Modifier.weight(1f)
             )
 
-            // Tab: Discover
+            // Enabled modules
             TabPillButton(
-                title = "Discover",
-                count = discoverCount,
-                isSelected = selectedTab == MarketTab.DISCOVER,
-                onClick = { onSelectTab(MarketTab.DISCOVER) },
+                title = "Active",
+                count = activeCount,
+                isSelected = selectedFilter == ModuleFilter.ACTIVE,
+                onClick = { onSelectFilter(ModuleFilter.ACTIVE) },
                 modifier = Modifier.weight(1f)
             )
         }
@@ -813,11 +845,11 @@ private fun TabPillButton(
 }
 
 @Composable
-private fun HeroCard() {
+private fun ModuleSummaryCard(moduleCount: Int, activeCount: Int) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .testTag("hero_extend_hiris_card"),
+            .testTag("module_summary_card"),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFF0D1525)
@@ -830,12 +862,9 @@ private fun HeroCard() {
                 .padding(horizontal = 18.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Text Column on left
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Extend Your HIRIS",
+                    text = "HIRIS Modules",
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.5.sp
@@ -846,7 +875,7 @@ private fun HeroCard() {
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    text = "Choose the extensions you want.\nActivate or disable them anytime.\nTap the gear to configure an active extension.",
+                    text = "$moduleCount modules included · $activeCount active",
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontSize = 12.sp,
                         lineHeight = 17.sp
@@ -855,20 +884,13 @@ private fun HeroCard() {
                 )
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // 3D Cybernetic Orb illustration on right
-            HirisOrbIllustration(
-                size = 96.dp,
-                animated = true
-            )
         }
     }
 }
 
 @Composable
 private fun EmptyExtensionsView(
-    tab: MarketTab,
+    filter: ModuleFilter,
     searchQuery: String,
     onClearSearch: () -> Unit
 ) {
@@ -885,7 +907,11 @@ private fun EmptyExtensionsView(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = if (searchQuery.isNotEmpty()) "No matching extensions found" else "No installed extensions",
+                text = when {
+                    searchQuery.isNotEmpty() -> "No matching modules found"
+                    filter == ModuleFilter.ACTIVE -> "No active modules"
+                    else -> "No modules found"
+                },
                 style = MaterialTheme.typography.titleMedium,
                 color = TextPrimary
             )
@@ -894,7 +920,7 @@ private fun EmptyExtensionsView(
                 text = if (searchQuery.isNotEmpty()) {
                     "Try searching for another keyword or clear your query."
                 } else {
-                    "Switch to the Discover tab to explore and install new extensions."
+                    "No modules match the current filter."
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = TextSecondary

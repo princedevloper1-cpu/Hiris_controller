@@ -29,10 +29,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.BatteryAlert
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.LocalFireDepartment
-import androidx.compose.material.icons.rounded.Power
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Thermostat
 import androidx.compose.material.icons.rounded.Timer
@@ -64,9 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.floatingeye.battery.BatteryColors
 import com.example.floatingeye.battery.BatterySettingsRepository
-import com.example.floatingeye.battery.DrainTier
 import com.example.floatingeye.battery.PowerDrainTelemetry
-import com.example.floatingeye.shortcuts.InstalledAppsRepository
 import com.example.ui.theme.CyanNeonPrimary
 import com.example.ui.theme.CyanOnPrimary
 import com.example.ui.theme.CyanPrimaryContainer
@@ -79,8 +75,8 @@ import com.example.ui.theme.TextSecondary
 import com.example.ui.theme.TextTertiary
 
 /**
- * Ultra-futuristic Real-time Battery Drain & Power Consumption Telemetry Card.
- * Monitors mA, % per minute, Watts, and per-app battery consumption in real time.
+ * Device-level battery sensor telemetry. Per-app consumption is not reported
+ * because Android does not provide this app with reliable per-app measurements.
  * OFF by default as required by user.
  */
 @Composable
@@ -88,8 +84,6 @@ fun CyberPowerDrainCard(
     isEnabled: Boolean,
     telemetry: PowerDrainTelemetry,
     settingsRepository: BatterySettingsRepository,
-    installedAppsRepository: InstalledAppsRepository,
-    onLaunchApp: (String, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -132,13 +126,13 @@ fun CyberPowerDrainCard(
 
                     Column {
                         Text(
-                            text = "Real-time Battery Drain Monitor",
+                            text = "Device Battery Monitor",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
                         )
                         Text(
-                            text = if (isEnabled) "Active live cybernetic energy telemetry" else "Off by default • Tap switch to activate",
+                            text = if (isEnabled) "Device-level sensor readings" else "Off by default • Tap switch to activate",
                             style = MaterialTheme.typography.bodySmall,
                             color = if (isEnabled) CyanNeonPrimary else TextSecondary
                         )
@@ -163,14 +157,15 @@ fun CyberPowerDrainCard(
                 exit = fadeOut() + shrinkVertically()
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    // 1. Futuristic Oscilloscope Waveform HUD
+                    // 1. Device current sensor waveform
                     CyberOscilloscopeHUD(
                         points = telemetry.waveformPoints,
                         currentMa = telemetry.currentMa,
-                        isCharging = telemetry.isCharging
+                        isCharging = telemetry.isCharging,
+                        hasCurrentReading = telemetry.hasCurrentReading
                     )
 
-                    // 2. Real-time Metrics Grid (Discharge speed, %/min, Watts, Est. Remaining)
+                    // 2. Device-level sensor metrics
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -178,9 +173,9 @@ fun CyberPowerDrainCard(
                         // Metric A: Discharge Rate (mA & Watts)
                         TelemetryMetricBox(
                             icon = Icons.Rounded.Bolt,
-                            label = if (telemetry.isCharging) "Charge Intake" else "Live Drain Speed",
-                            value = "${telemetry.currentMa} mA",
-                            subValue = String.format("%.2f W", telemetry.powerWatts),
+                            label = if (telemetry.isCharging) "Charge Current" else "Device Current",
+                            value = if (telemetry.hasCurrentReading) "${telemetry.currentMa} mA" else "Unavailable",
+                            subValue = if (telemetry.hasVoltageReading && telemetry.hasCurrentReading) String.format("%.2f W", telemetry.powerWatts) else "Power sensor unavailable",
                             color = if (telemetry.isCharging) BatteryColors.NeonElectricCyan
                             else if (telemetry.currentMa > 450) BatteryColors.NeonRedCritical
                             else BatteryColors.NeonCyanNormal,
@@ -190,10 +185,10 @@ fun CyberPowerDrainCard(
                         // Metric B: Burn Rate (%/min & %/hr)
                         TelemetryMetricBox(
                             icon = Icons.Rounded.Speed,
-                            label = "Burn Rate",
-                            value = if (telemetry.isCharging) "+0.8% / min" else String.format("%.2f%% / min", telemetry.drainPercentPerMin),
-                            subValue = if (telemetry.isCharging) "Charging up" else String.format("%.1f%% / hr", telemetry.drainPercentPerHour),
-                            color = if (telemetry.drainPercentPerMin > 0.35f) BatteryColors.NeonAmberLow else CyanNeonPrimary,
+                            label = "Average Current",
+                            value = if (telemetry.hasAverageCurrentReading) "${telemetry.averageCurrentMa} mA" else "Unavailable",
+                            subValue = "Device battery sensor",
+                            color = CyanNeonPrimary,
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -202,14 +197,12 @@ fun CyberPowerDrainCard(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        // Metric C: Time Remaining
-                        val hours = telemetry.estimatedMinutesRemaining / 60
-                        val mins = telemetry.estimatedMinutesRemaining % 60
+                        // Metric C: Battery level reported by Android
                         TelemetryMetricBox(
                             icon = Icons.Rounded.Timer,
-                            label = if (telemetry.isCharging) "Until 100%" else "Time Remaining",
-                            value = "${hours}h ${mins}m",
-                            subValue = "${telemetry.batteryPercentage}% battery remaining",
+                            label = "Battery Level",
+                            value = if (telemetry.hasBatteryLevelReading) "${telemetry.batteryPercentage}%" else "Unavailable",
+                            subValue = if (telemetry.isCharging) "Charging" else "Device battery status",
                             color = CyanNeonPrimary,
                             modifier = Modifier.weight(1f)
                         )
@@ -217,59 +210,14 @@ fun CyberPowerDrainCard(
                         // Metric D: Temperature & Voltage
                         TelemetryMetricBox(
                             icon = Icons.Rounded.Thermostat,
-                            label = "Thermals & Volts",
-                            value = String.format("%.1f °C", telemetry.temperatureCelsius),
-                            subValue = String.format("%.2f Volts", telemetry.voltageVolts),
+                            label = "Temperature & Voltage",
+                            value = if (telemetry.hasTemperatureReading) String.format("%.1f °C", telemetry.temperatureCelsius) else "Unavailable",
+                            subValue = if (telemetry.hasVoltageReading) String.format("%.2f Volts", telemetry.voltageVolts) else "Voltage unavailable",
                             color = if (telemetry.temperatureCelsius > 40f) BatteryColors.NeonRedCritical else TextSecondary,
                             modifier = Modifier.weight(1f)
                         )
                     }
 
-                    // 3. Top Power Burning Apps (Apps ki pi boule chaj)
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Top Battery Draining Apps",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary
-                            )
-                            Text(
-                                text = "Live consumption impact",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = CyanNeonPrimary
-                            )
-                        }
-
-                        if (telemetry.topDrainingApps.isEmpty()) {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = SurfaceContainerLow,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = "Analyzing active background power consumption...",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = TextSecondary,
-                                    modifier = Modifier.padding(14.dp)
-                                )
-                            }
-                        } else {
-                            telemetry.topDrainingApps.forEach { appImpact ->
-                                AppDrainItemRow(
-                                    appImpact = appImpact,
-                                    icon = remember(appImpact.packageName) {
-                                        installedAppsRepository.getAppIcon(appImpact.packageName)
-                                    },
-                                    onLaunch = { onLaunchApp(appImpact.packageName, appImpact.appName) }
-                                )
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -284,6 +232,7 @@ private fun CyberOscilloscopeHUD(
     points: List<Float>,
     currentMa: Int,
     isCharging: Boolean,
+    hasCurrentReading: Boolean,
     modifier: Modifier = Modifier
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "oscilloscope_scan")
@@ -404,7 +353,11 @@ private fun CyberOscilloscopeHUD(
                             .background(if (isCharging) BatteryColors.NeonElectricCyan else Color(0xFF38E07B))
                     )
                     Text(
-                        text = if (isCharging) "CHARGING TELEMETRY" else "LIVE DRAIN WAVEFORM",
+                        text = when {
+                            !hasCurrentReading -> "CURRENT SENSOR UNAVAILABLE"
+                            isCharging -> "CHARGING CURRENT"
+                            else -> "DEVICE CURRENT"
+                        },
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = CyanNeonPrimary,
@@ -413,7 +366,7 @@ private fun CyberOscilloscopeHUD(
                 }
 
                 Text(
-                    text = "${currentMa} mA",
+                    text = if (hasCurrentReading) "${currentMa} mA" else "N/A",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -478,81 +431,3 @@ private fun TelemetryMetricBox(
     }
 }
 
-/**
- * Row item for top power draining apps.
- */
-@Composable
-private fun AppDrainItemRow(
-    appImpact: com.example.floatingeye.battery.AppDrainImpact,
-    icon: android.graphics.drawable.Drawable?,
-    onLaunch: () -> Unit
-) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = SurfaceContainerLow,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // App Icon
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = SurfaceContainerHigh,
-                modifier = Modifier.size(38.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    if (icon != null) {
-                        com.example.floatingeye.shortcuts.DrawableAppIcon(
-                            drawable = icon,
-                            contentDescription = appImpact.appName,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Rounded.Power,
-                            contentDescription = null,
-                            tint = CyanNeonPrimary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-            }
-
-            // App details
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = appImpact.appName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary
-                )
-                Text(
-                    text = "${appImpact.drainSpeedMa} mA • ~${String.format("%.1f", appImpact.hourlyDrainPercent)}%/hr",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
-                )
-            }
-
-            // Cyber Badge (HIGH / MODERATE / OPTIMIZED)
-            val badgeColor = Color(appImpact.powerTier.colorHex)
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = badgeColor.copy(alpha = 0.15f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, badgeColor.copy(alpha = 0.45f))
-            ) {
-                Text(
-                    text = appImpact.powerTier.label,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = badgeColor,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-            }
-        }
-    }
-}

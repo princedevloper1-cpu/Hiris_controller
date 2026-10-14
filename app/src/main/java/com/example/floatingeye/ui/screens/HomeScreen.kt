@@ -87,7 +87,7 @@ fun HomeScreen(
     val batteryInfo by batteryController.batteryInfo.collectAsStateWithLifecycle()
     val shortcuts by shortcutRepository.shortcuts.collectAsStateWithLifecycle()
 
-    val activeCount = extensions.count { it.isInstalled && it.isActive }
+    val activeCount = extensions.count { it.isActive }
     val overlaySize = positionManager.getOverlaySize()
     val isShortcutsActive = extensions.firstOrNull { it.id == ExtensionRepository.ID_SHORTCUTS }?.isActive == true
     val isBatteryActive = extensions.firstOrNull { it.id == ExtensionRepository.ID_BATTERY }?.isActive == true
@@ -237,7 +237,7 @@ fun HomeScreen(
                 MetricCard(
                     title = "Extensions",
                     value = "$activeCount Active",
-                    subtitle = "${extensions.size} available in market",
+                    subtitle = "${extensions.size} built-in modules",
                     icon = Icons.Rounded.Extension,
                     iconTint = CyanNeonPrimary,
                     onClick = onNavigateToExtensions,
@@ -322,7 +322,7 @@ fun HomeScreen(
                                     } else {
                                         Toast.makeText(
                                             context,
-                                            "Radial Shortcuts are inactive. Flip switch ON in Extensions Market.",
+                                            "Radial Shortcuts are inactive. Enable them in Module Manager.",
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     }
@@ -336,7 +336,7 @@ fun HomeScreen(
                         text = if (isShortcutsActive) {
                             if (isPreviewRadialOpen) "Radial shortcuts menu opened" else "Click the button to test radial rotation"
                         } else {
-                            "Shortcuts extension is inactive. Turn switch ON in Market to activate."
+                            "Shortcuts are inactive. Enable them in Module Manager."
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isShortcutsActive) TextSecondary else Color(0xFFF59E0B),
@@ -346,7 +346,7 @@ fun HomeScreen(
             }
         }
 
-        // 5. Extensions Market Promo Banner
+        // 5. Module manager entry
         item {
             Card(
                 shape = RoundedCornerShape(18.dp),
@@ -379,12 +379,12 @@ fun HomeScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Explore Extensions Market",
+                            text = "Manage modules",
                             style = MaterialTheme.typography.titleMedium,
                             color = TextPrimary
                         )
                         Text(
-                            text = "Discover gestures, appearance controls, power monitoring & more",
+                            text = "Built-in tools for productivity, security, and device controls",
                             style = MaterialTheme.typography.bodySmall,
                             color = TextSecondary,
                             fontSize = 12.sp

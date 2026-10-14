@@ -22,6 +22,7 @@ data class MediaDownloadItem(
     val totalBytes: Long = -1L,
     val downloadedBytes: Long = 0L,
     val status: DownloadStatus = DownloadStatus.PENDING,
+    val errorMessage: String = "",
     val downloadManagerId: Long = -1L,
     val createdAtMillis: Long = System.currentTimeMillis()
 ) {

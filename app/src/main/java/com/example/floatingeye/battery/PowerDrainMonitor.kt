@@ -1,15 +1,9 @@
 package com.example.floatingeye.battery
 
-import android.app.AppOpsManager
 import android.content.Context
-import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager
+import android.content.Intent
 import android.os.BatteryManager
-import android.os.Build
-import android.os.Process
-import android.provider.Settings
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,43 +15,26 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.abs
-import kotlin.math.roundToInt
-import kotlin.random.Random
 
 data class PowerDrainTelemetry(
     val currentMa: Int = 0,
     val averageCurrentMa: Int = 0,
-    val voltageVolts: Float = 3.85f,
-    val powerWatts: Float = 1.10f,
-    val temperatureCelsius: Float = 31.5f,
-    val drainPercentPerMin: Float = 0.16f,
-    val drainPercentPerHour: Float = 9.6f,
-    val estimatedMinutesRemaining: Int = 380,
+    val voltageVolts: Float = 0f,
+    val powerWatts: Float = 0f,
+    val temperatureCelsius: Float = 0f,
     val isCharging: Boolean = false,
-    val batteryPercentage: Int = 100,
-    val waveformPoints: List<Float> = emptyList(),
-    val topDrainingApps: List<AppDrainImpact> = emptyList()
+    val batteryPercentage: Int = 0,
+    val hasCurrentReading: Boolean = false,
+    val hasAverageCurrentReading: Boolean = false,
+    val hasVoltageReading: Boolean = false,
+    val hasTemperatureReading: Boolean = false,
+    val hasBatteryLevelReading: Boolean = false,
+    val waveformPoints: List<Float> = emptyList()
 )
-
-data class AppDrainImpact(
-    val packageName: String,
-    val appName: String,
-    val drainSpeedMa: Int,
-    val hourlyDrainPercent: Float,
-    val powerTier: DrainTier,
-    val isForeground: Boolean = false
-)
-
-enum class DrainTier(val label: String, val colorHex: Long) {
-    HIGH("HIGH DRAIN", 0xFFFF3B30),
-    MODERATE("MODERATE", 0xFFFFB020),
-    LOW("OPTIMIZED", 0xFF00E5FF)
-}
 
 /**
- * Real-time hardware battery drain and energy consumption engine.
- * Reads BatteryManager instant current (mA), voltage, power (Watts),
- * and correlates with active apps to provide cybernetic live telemetry.
+ * Reads device-level battery sensor data. Per-app battery attribution is not
+ * available to this regular app, so this monitor reports only device totals.
  */
 class PowerDrainMonitor(
     private val context: Context,
@@ -72,10 +49,7 @@ class PowerDrainMonitor(
     private val monitorScope = CoroutineScope(Dispatchers.Default)
     private var monitorJob: Job? = null
 
-    // Rolling oscilloscope waveform data (30 points, normalized 0.1f..0.95f)
-    private val waveBuffer = ArrayDeque<Float>(30).apply {
-        repeat(30) { add(0.45f) }
-    }
+    private val waveBuffer = ArrayDeque<Float>(30)
 
     fun start() {
         if (monitorJob != null) return
@@ -102,68 +76,43 @@ class PowerDrainMonitor(
             ContextCompat.RECEIVER_EXPORTED
         )
 
-        val level = stickyIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, 100) ?: 100
-        val scale = stickyIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100
-        val pct = if (scale > 0) (level * 100) / scale else level
+        val level = stickyIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+        val scale = stickyIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+        val hasBatteryLevel = level >= 0 && scale > 0
+        val pct = if (hasBatteryLevel) ((level * 100) / scale).coerceIn(0, 100) else 0
 
         val status = stickyIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
         val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
                 status == BatteryManager.BATTERY_STATUS_FULL
 
-        val voltageMv = stickyIntent?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 3850) ?: 3850
-        val voltageVolts = (voltageMv / 1000f).coerceIn(3.0f, 4.5f)
+        val voltageMv = stickyIntent?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0) ?: 0
+        val hasVoltage = voltageMv > 0
+        val voltageVolts = if (hasVoltage) voltageMv / 1000f else 0f
 
-        val tempTenths = stickyIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 310) ?: 310
-        val temperatureCelsius = (tempTenths / 10f).coerceIn(15.0f, 55.0f)
+        val tempTenths = stickyIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
+        val hasTemperature = tempTenths > 0
+        val temperatureCelsius = if (hasTemperature) tempTenths / 10f else 0f
 
-        // Read hardware current in microamperes (µA)
+        // Android returns Integer.MIN_VALUE when a current property is unsupported.
         var rawCurrentUa = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW)
         var rawAvgUa = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_AVERAGE)
-
-        // Fallback for emulators or chips reporting 0 or Integer.MIN_VALUE
-        if (rawCurrentUa == 0 || rawCurrentUa == Integer.MIN_VALUE) {
-            rawCurrentUa = if (isCharging) 1250_000 else -(280_000 + Random.nextInt(-40_000, 50_000))
-        }
-        if (rawAvgUa == 0 || rawAvgUa == Integer.MIN_VALUE) {
-            rawAvgUa = rawCurrentUa
-        }
+        val hasCurrent = rawCurrentUa != Integer.MIN_VALUE
+        val hasAverageCurrent = rawAvgUa != Integer.MIN_VALUE
 
         // Convert µA to mA
-        val currentMa = abs(rawCurrentUa / 1000)
-        val avgMa = abs(rawAvgUa / 1000)
+        val currentMa = if (hasCurrent) abs(rawCurrentUa / 1000) else 0
+        val avgMa = if (hasAverageCurrent) abs(rawAvgUa / 1000) else 0
 
-        // Power (Watts) = Volts * Amps
-        val powerWatts = (voltageVolts * (currentMa / 1000f)).coerceAtLeast(0.05f)
-
-        // Estimated drain rates
-        // Standard battery ~4000mAh: currentMa / 4000 = hourly fraction * 100 = % per hour
-        val estimatedCapacityMa = 4000f
-        val drainPercentPerHour = if (isCharging) 0f else (currentMa / estimatedCapacityMa) * 100f
-        val drainPercentPerMin = if (isCharging) 0f else drainPercentPerHour / 60f
-
-        // Estimated minutes remaining until empty
-        val estimatedMinutesRemaining = if (isCharging) {
-            val neededPct = (100 - pct).coerceAtLeast(1)
-            ((neededPct / 100f) * estimatedCapacityMa / (currentMa.coerceAtLeast(200)) * 60f).roundToInt()
+        val powerWatts = if (hasCurrent && hasVoltage) {
+            voltageVolts * (currentMa / 1000f)
         } else {
-            if (currentMa > 0) {
-                ((pct / 100f) * estimatedCapacityMa / currentMa * 60f).roundToInt()
-            } else {
-                360
-            }
+            0f
         }
 
-        // Generate cybernetic waveform point matching live drain fluctuations
-        val loadFactor = (currentMa / 800f).coerceIn(0.15f, 0.95f)
-        val jitter = (Random.nextFloat() - 0.5f) * 0.15f
-        val newWavePoint = (loadFactor + jitter).coerceIn(0.08f, 0.98f)
-
-        if (waveBuffer.size >= 30) {
-            waveBuffer.removeFirst()
+        if (hasCurrent) {
+            if (waveBuffer.size >= 30) waveBuffer.removeFirst()
+            waveBuffer.addLast((currentMa / 2000f).coerceIn(0f, 1f))
         }
-        waveBuffer.addLast(newWavePoint)
-
-        val topApps = analyzeTopDrainingApps(currentMa, isCharging)
 
         _telemetry.value = PowerDrainTelemetry(
             currentMa = currentMa,
@@ -171,81 +120,14 @@ class PowerDrainMonitor(
             voltageVolts = voltageVolts,
             powerWatts = powerWatts,
             temperatureCelsius = temperatureCelsius,
-            drainPercentPerMin = drainPercentPerMin,
-            drainPercentPerHour = drainPercentPerHour,
-            estimatedMinutesRemaining = estimatedMinutesRemaining.coerceAtLeast(1),
             isCharging = isCharging,
             batteryPercentage = pct,
-            waveformPoints = waveBuffer.toList(),
-            topDrainingApps = topApps
+            hasCurrentReading = hasCurrent,
+            hasAverageCurrentReading = hasAverageCurrent,
+            hasVoltageReading = hasVoltage,
+            hasTemperatureReading = hasTemperature,
+            hasBatteryLevelReading = hasBatteryLevel,
+            waveformPoints = waveBuffer.toList()
         )
-    }
-
-    private fun analyzeTopDrainingApps(totalCurrentMa: Int, isCharging: Boolean): List<AppDrainImpact> {
-        val pm = context.packageManager
-        val launchIntent = Intent(Intent.ACTION_MAIN).apply {
-            addCategory(Intent.CATEGORY_LAUNCHER)
-        }
-        val resolveInfos = pm.queryIntentActivities(launchIntent, PackageManager.MATCH_ALL)
-
-        val sampleApps = resolveInfos.take(8).map { ri ->
-            val pName = ri.activityInfo.packageName
-            val label = ri.loadLabel(pm).toString()
-            val isHighPower = pName.contains("camera", ignoreCase = true) ||
-                    pName.contains("chrome", ignoreCase = true) ||
-                    pName.contains("youtube", ignoreCase = true) ||
-                    pName.contains("maps", ignoreCase = true) ||
-                    pName.contains("gallery", ignoreCase = true)
-
-            val shareFraction = if (isHighPower) 0.32f else 0.12f
-            val appDrainMa = (totalCurrentMa * shareFraction).roundToInt().coerceIn(15, 350)
-            val hourlyPct = (appDrainMa / 4000f) * 100f
-
-            val tier = when {
-                appDrainMa >= 90 -> DrainTier.HIGH
-                appDrainMa >= 45 -> DrainTier.MODERATE
-                else -> DrainTier.LOW
-            }
-
-            AppDrainImpact(
-                packageName = pName,
-                appName = label,
-                drainSpeedMa = appDrainMa,
-                hourlyDrainPercent = hourlyPct,
-                powerTier = tier
-            )
-        }.sortedByDescending { it.drainSpeedMa }
-
-        return sampleApps.take(4)
-    }
-
-    fun hasUsageAccessPermission(): Boolean {
-        val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
-        val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            appOps.unsafeCheckOpNoThrow(
-                AppOpsManager.OPSTR_GET_USAGE_STATS,
-                Process.myUid(),
-                context.packageName
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            appOps.checkOpNoThrow(
-                AppOpsManager.OPSTR_GET_USAGE_STATS,
-                Process.myUid(),
-                context.packageName
-            )
-        }
-        return mode == AppOpsManager.MODE_ALLOWED
-    }
-
-    fun openUsageAccessSettings() {
-        try {
-            val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
     }
 }

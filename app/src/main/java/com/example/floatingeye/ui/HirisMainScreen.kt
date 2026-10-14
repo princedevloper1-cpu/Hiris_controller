@@ -99,7 +99,7 @@ fun HirisMainScreen(
     val batteryInfo by batteryController.batteryInfo.collectAsStateWithLifecycle()
     val extensions by extensionRepository.extensions.collectAsStateWithLifecycle()
     val activeModulesCount = remember(extensions) {
-        extensions.count { it.isInstalled && it.isActive }
+        extensions.count { it.isActive }
     }
 
     // Navigation and Sheet States

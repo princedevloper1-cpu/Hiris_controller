@@ -137,7 +137,7 @@ fun ExecutiveTopAppBar(
                     Text(
                         text = when (currentScreen) {
                             HirisNavScreen.HOME -> "Executive System Dashboard"
-                            HirisNavScreen.EXTENSIONS -> "Extensions & Network Firewall"
+                            HirisNavScreen.EXTENSIONS -> "Module Manager"
                             HirisNavScreen.EYE -> "HUD Optics & Calibration"
                             HirisNavScreen.PROFILE -> "Diagnostics & Device Specs"
                         },

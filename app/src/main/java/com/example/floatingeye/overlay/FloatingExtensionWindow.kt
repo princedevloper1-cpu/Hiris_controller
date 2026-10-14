@@ -311,10 +311,6 @@ fun FloatingExtensionWindow(
                                 isEnabled = isEnabled,
                                 telemetry = telemetry,
                                 settingsRepository = batterySettingsRepository,
-                                installedAppsRepository = installedAppsRepository,
-                                onLaunchApp = { pkg, _ ->
-                                    context.packageManager.getLaunchIntentForPackage(pkg)?.let(context::startActivity)
-                                },
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

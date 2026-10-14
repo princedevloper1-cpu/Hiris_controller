@@ -30,7 +30,6 @@ class ExtensionRepository(
             categoryTags = listOf("Productivity", "Launcher"),
             category = ExtensionCategory.PRODUCTIVITY,
             iconKey = "shortcuts",
-            isInstalled = true,
             isActive = false // OFF by default; user flips switch to activate
         ),
         HirisExtension(
@@ -40,7 +39,6 @@ class ExtensionRepository(
             categoryTags = listOf("Gestures", "Productivity"),
             category = ExtensionCategory.PRODUCTIVITY,
             iconKey = "gestures",
-            isInstalled = true,
             isActive = false // OFF by default; user flips switch to activate
         ),
         HirisExtension(
@@ -50,7 +48,6 @@ class ExtensionRepository(
             categoryTags = listOf("Visualization", "System"),
             category = ExtensionCategory.VISUALIZATION,
             iconKey = "battery",
-            isInstalled = true,
             isActive = false // OFF by default; user flips switch to activate
         ),
         HirisExtension(
@@ -60,7 +57,6 @@ class ExtensionRepository(
             categoryTags = listOf("System", "Monitoring"),
             category = ExtensionCategory.SYSTEM,
             iconKey = "drain",
-            isInstalled = true,
             isActive = false // OFF by default; user flips switch to activate
         ),
         HirisExtension(
@@ -70,7 +66,6 @@ class ExtensionRepository(
             categoryTags = listOf("Customization", "Size", "Glow"),
             category = ExtensionCategory.CUSTOMIZATION,
             iconKey = "appearance",
-            isInstalled = true,
             isActive = false // OFF by default; user flips switch to activate
         ),
         HirisExtension(
@@ -80,7 +75,6 @@ class ExtensionRepository(
             categoryTags = listOf("Audio", "Utilities"),
             category = ExtensionCategory.UTILITIES,
             iconKey = "mic",
-            isInstalled = true,
             isActive = false // OFF by default; user flips switch to activate
         ),
         HirisExtension(
@@ -90,7 +84,6 @@ class ExtensionRepository(
             categoryTags = listOf("System", "Utilities"),
             category = ExtensionCategory.UTILITIES,
             iconKey = "notifications",
-            isInstalled = true,
             isActive = false // OFF by default; user flips switch to activate
         ),
         HirisExtension(
@@ -100,9 +93,7 @@ class ExtensionRepository(
             categoryTags = listOf("Productivity", "Reminders", "Tasks"),
             category = ExtensionCategory.PRODUCTIVITY,
             iconKey = "tasks",
-            isInstalled = true,
-            isActive = false, // OFF by default; user flips switch to activate
-            isNew = true
+            isActive = false // OFF by default; user flips switch to activate
         ),
         HirisExtension(
             id = ID_DOWNLOADER,
@@ -111,9 +102,7 @@ class ExtensionRepository(
             categoryTags = listOf("Media", "Video", "Audio", "Downloader"),
             category = ExtensionCategory.UTILITIES,
             iconKey = "download",
-            isInstalled = true,
-            isActive = false, // OFF by default; user flips switch to activate
-            isNew = true
+            isActive = false // OFF by default; user flips switch to activate
         ),
         HirisExtension(
             id = ID_FIREWALL,
@@ -122,9 +111,7 @@ class ExtensionRepository(
             categoryTags = listOf("Network", "Security", "Firewall"),
             category = ExtensionCategory.SYSTEM,
             iconKey = "firewall",
-            isInstalled = true,
-            isActive = false, // OFF by default; user flips switch to activate
-            isNew = true
+            isActive = false // OFF by default; user flips switch to activate
         )
     )
 
@@ -132,7 +119,7 @@ class ExtensionRepository(
     val extensions: StateFlow<List<HirisExtension>> = _extensions.asStateFlow()
 
     private val preferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == null || key.startsWith("ext_active_") || key.startsWith("ext_installed_")) {
+        if (key == null || key.startsWith("ext_active_")) {
             _extensions.value = loadExtensions()
         }
     }
@@ -153,36 +140,18 @@ class ExtensionRepository(
 
     private fun loadExtensions(): List<HirisExtension> {
         return defaultExtensions.map { def ->
-            val installedKey = "ext_installed_${def.id}"
             val activeKey = "ext_active_${def.id}"
-
-            val isInstalled = if (prefs.contains(installedKey)) {
-                prefs.getBoolean(installedKey, def.isInstalled)
-            } else {
-                def.isInstalled
-            }
-
-            val isActive = if (prefs.contains(activeKey)) {
-                prefs.getBoolean(activeKey, false)
-            } else {
-                false
-            }
-
-            def.copy(
-                isInstalled = isInstalled,
-                isActive = if (isInstalled) isActive else false
-            )
+            def.copy(isActive = prefs.getBoolean(activeKey, false))
         }
     }
 
     fun isExtensionActive(extensionId: String): Boolean {
         val ext = _extensions.value.firstOrNull { it.id == extensionId }
-        return ext != null && ext.isInstalled && ext.isActive
+        return ext?.isActive == true
     }
 
     fun toggleActive(extensionId: String, active: Boolean) {
-        val extension = _extensions.value.firstOrNull { it.id == extensionId } ?: return
-        if (active && !extension.isInstalled) return
+        if (_extensions.value.none { it.id == extensionId }) return
 
         prefs.edit().putBoolean("ext_active_$extensionId", active).apply()
 
@@ -197,39 +166,7 @@ class ExtensionRepository(
 
         _extensions.value = _extensions.value.map {
             if (it.id == extensionId) {
-                it.copy(isActive = active && it.isInstalled)
-            } else it
-        }
-    }
-
-    fun installExtension(extensionId: String) {
-        if (_extensions.value.none { it.id == extensionId }) return
-
-        prefs.edit()
-            .putBoolean("ext_installed_$extensionId", true)
-            .putBoolean("ext_active_$extensionId", false)
-            .apply()
-
-        _extensions.value = _extensions.value.map {
-            if (it.id == extensionId) {
-                it.copy(isInstalled = true, isActive = false, isNew = false)
-            } else it
-        }
-    }
-
-    fun uninstallExtension(extensionId: String) {
-        if (_extensions.value.none { it.id == extensionId }) return
-
-        // Stop any runtime feature before clearing its installed/active state.
-        toggleActive(extensionId, false)
-        prefs.edit()
-            .putBoolean("ext_installed_$extensionId", false)
-            .putBoolean("ext_active_$extensionId", false)
-            .apply()
-
-        _extensions.value = _extensions.value.map {
-            if (it.id == extensionId) {
-                it.copy(isInstalled = false, isActive = false)
+                it.copy(isActive = active)
             } else it
         }
     }

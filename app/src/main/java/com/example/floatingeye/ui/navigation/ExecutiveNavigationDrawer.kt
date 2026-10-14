@@ -373,7 +373,7 @@ fun ExecutiveNavigationDrawerContent(
             )
 
             DrawerNavigationItem(
-                label = "Extensions & Modules",
+                label = "Module Manager",
                 icon = Icons.Rounded.Widgets,
                 isSelected = currentScreen == HirisNavScreen.EXTENSIONS,
                 badge = "$activeModulesCount Active",

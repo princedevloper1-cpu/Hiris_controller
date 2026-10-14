@@ -1490,11 +1490,7 @@ fun DashboardScreen(
             CyberPowerDrainCard(
                 isEnabled = drainMonitorEnabled,
                 telemetry = drainTelemetry,
-                settingsRepository = batterySettingsRepository,
-                installedAppsRepository = installedAppsRepository,
-                onLaunchApp = { pkg, name ->
-                    launchManager.launchApp(pkg, name)
-                }
+                settingsRepository = batterySettingsRepository
             )
 
             Spacer(modifier = Modifier.height(16.dp))

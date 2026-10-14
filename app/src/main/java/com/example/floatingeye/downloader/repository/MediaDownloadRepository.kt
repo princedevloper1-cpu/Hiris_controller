@@ -74,6 +74,7 @@ class MediaDownloadRepository private constructor(private val context: Context) 
                             var newBytes = item.downloadedBytes
                             var newTotal = item.totalBytes
                             var newStatus = item.status
+                            var newErrorMessage = item.errorMessage
 
                             if (cursor != null && cursor.moveToFirst()) {
                                 val bytesDownloadedIndex = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
@@ -90,14 +91,28 @@ class MediaDownloadRepository private constructor(private val context: Context) 
                                         DownloadManager.STATUS_RUNNING -> DownloadStatus.DOWNLOADING
                                         else -> DownloadStatus.PENDING
                                     }
+                                    val mediaTypeIndex = cursor.getColumnIndex(DownloadManager.COLUMN_MEDIA_TYPE)
+                                    val contentType = if (mediaTypeIndex >= 0) cursor.getString(mediaTypeIndex).orEmpty() else ""
+                                    if (status == DownloadManager.STATUS_SUCCESSFUL && !isExpectedMediaType(contentType, item.mediaType)) {
+                                        newStatus = DownloadStatus.FAILED
+                                        newErrorMessage = "Lyen an pa t bay yon fichye ${if (item.mediaType == MediaType.AUDIO) "odyo" else "videyo"} dirèk. Kole lyen MP3/MP4 fichye a, pa paj sit la."
+                                        downloadManager.remove(item.downloadManagerId)
+                                    } else if (status == DownloadManager.STATUS_FAILED) {
+                                        val reasonIndex = cursor.getColumnIndex(DownloadManager.COLUMN_REASON)
+                                        val reason = if (reasonIndex >= 0) cursor.getInt(reasonIndex) else 0
+                                        newErrorMessage = downloadFailureMessage(reason)
+                                    } else {
+                                        newErrorMessage = ""
+                                    }
                                 }
                                 cursor.close()
-                                if (newBytes != item.downloadedBytes || newStatus != item.status || newTotal != item.totalBytes) {
+                                if (newBytes != item.downloadedBytes || newStatus != item.status || newTotal != item.totalBytes || newErrorMessage != item.errorMessage) {
                                     changed = true
                                     item.copy(
                                         downloadedBytes = newBytes,
                                         totalBytes = newTotal,
-                                        status = newStatus
+                                        status = newStatus,
+                                        errorMessage = newErrorMessage
                                     )
                                 } else item
                             } else {
@@ -121,20 +136,60 @@ class MediaDownloadRepository private constructor(private val context: Context) 
         if (cursor.moveToFirst()) {
             val statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
             if (statusIndex >= 0) {
-                val status = cursor.getInt(statusIndex)
-                val newStatus = if (status == DownloadManager.STATUS_SUCCESSFUL) DownloadStatus.COMPLETED else DownloadStatus.FAILED
                 val current = _downloads.value
-                val updated = current.map {
-                    if (it.downloadManagerId == dmId) it.copy(status = newStatus) else it
+                val item = current.firstOrNull { it.downloadManagerId == dmId }
+                if (item != null) {
+                    val status = cursor.getInt(statusIndex)
+                    val mediaTypeIndex = cursor.getColumnIndex(DownloadManager.COLUMN_MEDIA_TYPE)
+                    val contentType = if (mediaTypeIndex >= 0) cursor.getString(mediaTypeIndex).orEmpty() else ""
+                    val badContent = status == DownloadManager.STATUS_SUCCESSFUL && !isExpectedMediaType(contentType, item.mediaType)
+                    val newStatus = when {
+                        badContent -> DownloadStatus.FAILED
+                        status == DownloadManager.STATUS_SUCCESSFUL -> DownloadStatus.COMPLETED
+                        status == DownloadManager.STATUS_FAILED -> DownloadStatus.FAILED
+                        status == DownloadManager.STATUS_RUNNING -> DownloadStatus.DOWNLOADING
+                        else -> DownloadStatus.PENDING
+                    }
+                    val errorMessage = when {
+                        badContent -> "Lyen an pa t bay yon fichye ${if (item.mediaType == MediaType.AUDIO) "odyo" else "videyo"} dirèk. Kole lyen MP3/MP4 fichye a, pa paj sit la."
+                        status == DownloadManager.STATUS_FAILED -> {
+                            val reasonIndex = cursor.getColumnIndex(DownloadManager.COLUMN_REASON)
+                            downloadFailureMessage(if (reasonIndex >= 0) cursor.getInt(reasonIndex) else 0)
+                        }
+                        else -> ""
+                    }
+                    if (badContent) dm.remove(dmId)
+                    val updated = current.map {
+                        if (it.downloadManagerId == dmId) it.copy(status = newStatus, errorMessage = errorMessage) else it
+                    }
+                    saveDownloads(updated)
                 }
-                saveDownloads(updated)
             }
         }
         cursor.close()
     }
 
+    private fun isExpectedMediaType(contentType: String, type: MediaType): Boolean {
+        if (contentType.isBlank() || contentType == "application/octet-stream") return true
+        if (contentType.startsWith("text/", ignoreCase = true) || contentType.contains("html", ignoreCase = true)) return false
+        return when (type) {
+            MediaType.AUDIO -> contentType.startsWith("audio/", ignoreCase = true) || contentType.equals("application/mp3", ignoreCase = true)
+            MediaType.VIDEO -> contentType.startsWith("video/", ignoreCase = true) || contentType.equals("application/mp4", ignoreCase = true)
+        }
+    }
+
+    private fun downloadFailureMessage(reason: Int): String = when (reason) {
+        DownloadManager.ERROR_INSUFFICIENT_SPACE -> "Pa gen ase espas nan telefòn nan."
+        DownloadManager.ERROR_DEVICE_NOT_FOUND -> "Kat memwa a pa disponib."
+        DownloadManager.ERROR_UNHANDLED_HTTP_CODE,
+        DownloadManager.ERROR_HTTP_DATA_ERROR,
+        DownloadManager.ERROR_TOO_MANY_REDIRECTS -> "Sèvè a pa t bay fichye a. Verifye lyen dirèk la oswa eseye ankò pita."
+        DownloadManager.ERROR_CANNOT_RESUME -> "Telechajman an te koupe; rekòmanse li."
+        else -> "Telechajman an echwe. Verifye koneksyon an ak lyen dirèk fichye a."
+    }
+
     private fun loadDownloads(): List<MediaDownloadItem> {
-        val jsonStr = prefs.getString(KEY_DOWNLOADS_JSON, null) ?: return defaultSampleDownloads()
+        val jsonStr = prefs.getString(KEY_DOWNLOADS_JSON, null) ?: return emptyList()
         return try {
             val array = JSONArray(jsonStr)
             val list = mutableListOf<MediaDownloadItem>()
@@ -159,6 +214,7 @@ class MediaDownloadRepository private constructor(private val context: Context) 
                         } catch (_: Exception) {
                             DownloadStatus.COMPLETED
                         },
+                        errorMessage = obj.optString("errorMessage", ""),
                         downloadManagerId = obj.optLong("downloadManagerId", -1L),
                         createdAtMillis = obj.optLong("createdAtMillis", System.currentTimeMillis())
                     )
@@ -166,33 +222,8 @@ class MediaDownloadRepository private constructor(private val context: Context) 
             }
             list.sortedByDescending { it.createdAtMillis }
         } catch (_: Exception) {
-            defaultSampleDownloads()
+            emptyList()
         }
-    }
-
-    private fun defaultSampleDownloads(): List<MediaDownloadItem> {
-        return listOf(
-            MediaDownloadItem(
-                id = "demo_1",
-                title = "Cyberpunk Neon Theme Loop",
-                sourceUrl = "https://assets.mixkit.co/videos/preview/mixkit-futuristic-city-with-flying-cars-and-skyscrapers-41551-large.mp4",
-                mediaType = MediaType.VIDEO,
-                qualityLabel = "1080p MP4",
-                totalBytes = 8_420_000L,
-                downloadedBytes = 8_420_000L,
-                status = DownloadStatus.COMPLETED
-            ),
-            MediaDownloadItem(
-                id = "demo_2",
-                title = "HIRIS Synthwave Beat",
-                sourceUrl = "https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3",
-                mediaType = MediaType.AUDIO,
-                qualityLabel = "320kbps MP3",
-                totalBytes = 4_100_000L,
-                downloadedBytes = 4_100_000L,
-                status = DownloadStatus.COMPLETED
-            )
-        )
     }
 
     private fun saveDownloads(list: List<MediaDownloadItem>) {
@@ -208,6 +239,7 @@ class MediaDownloadRepository private constructor(private val context: Context) 
                 put("totalBytes", item.totalBytes)
                 put("downloadedBytes", item.downloadedBytes)
                 put("status", item.status.name)
+                put("errorMessage", item.errorMessage)
                 put("downloadManagerId", item.downloadManagerId)
                 put("createdAtMillis", item.createdAtMillis)
             }
@@ -233,56 +265,69 @@ class MediaDownloadRepository private constructor(private val context: Context) 
         } catch (e: Exception) {
             return Result.failure(IllegalArgumentException("Lyen an pa valab: ${e.message}"))
         }
-
-        val lastPathSegment = parsedUri.lastPathSegment ?: ""
-        val extension = when {
-            type == MediaType.AUDIO && !lastPathSegment.endsWith(".mp3", ignoreCase = true) -> ".mp3"
-            type == MediaType.VIDEO && !lastPathSegment.endsWith(".mp4", ignoreCase = true) -> ".mp4"
-            else -> ""
+        if (parsedUri.host.isNullOrBlank()) {
+            return Result.failure(IllegalArgumentException("Lyen an pa gen adrès sit entènèt ki valab."))
         }
 
-        val fileName = if (!customTitle.isNullOrBlank()) {
-            "${customTitle.trim().replace("[^a-zA-Z0-9_.-]".toRegex(), "_")}$extension"
-        } else if (lastPathSegment.isNotBlank()) {
-            "$lastPathSegment$extension"
+        val dm = downloadManager
+            ?: return Result.failure(IllegalStateException("Sèvis Download Manager Android lan pa disponib sou telefòn sa a."))
+
+        val pathName = parsedUri.lastPathSegment.orEmpty().substringBefore('?').substringBefore('#')
+        val pathExtension = pathName.substringAfterLast('.', "").lowercase()
+        val audioExtensions = setOf("mp3", "m4a", "aac", "wav", "ogg", "opus", "flac")
+        val videoExtensions = setOf("mp4", "m4v", "mov", "webm", "mkv", "3gp")
+        if (pathExtension == "m3u8" || pathExtension == "mpd") {
+            return Result.failure(IllegalArgumentException("Lyen sa a se yon playlist streaming. Downloader la bezwen yon lyen dirèk pou fichye MP3 oswa MP4."))
+        }
+        if (type == MediaType.AUDIO && pathExtension in videoExtensions) {
+            return Result.failure(IllegalArgumentException("Lyen sa a mennen nan yon videyo. App la pa konvèti videyo pou fè MP3; chwazi Videyo oswa bay yon lyen MP3 dirèk."))
+        }
+        if (type == MediaType.VIDEO && pathExtension in audioExtensions) {
+            return Result.failure(IllegalArgumentException("Lyen sa a mennen nan yon odyo. Chwazi Odyo pou telechaje fichye MP3 la."))
+        }
+        if (type == MediaType.AUDIO && pathExtension in audioExtensions && pathExtension != "mp3") {
+            return Result.failure(IllegalArgumentException("Lyen sa a se yon fichye .$pathExtension. App la pa konvèti fichye odyo an MP3; bay yon lyen MP3 dirèk."))
+        }
+        if (type == MediaType.VIDEO && pathExtension in videoExtensions && pathExtension != "mp4") {
+            return Result.failure(IllegalArgumentException("Lyen sa a se yon fichye .$pathExtension. App la pa konvèti videyo an MP4; bay yon lyen MP4 dirèk."))
+        }
+
+        val expectedExtension = if (type == MediaType.AUDIO) ".mp3" else ".mp4"
+        val rawName = if (!customTitle.isNullOrBlank()) customTitle.trim() else pathName.substringBeforeLast('.', pathName)
+        val safeName = rawName
+            .replace(Regex("[^\\p{L}\\p{N}._ -]"), "_")
+            .trim(' ', '.')
+            .ifBlank { "media_${System.currentTimeMillis()}" }
+        val baseName = if (safeName.endsWith(expectedExtension, ignoreCase = true)) {
+            safeName.dropLast(expectedExtension.length)
         } else {
-            "media_${System.currentTimeMillis()}$extension"
+            safeName
         }
+        val fileName = "$baseName$expectedExtension"
 
         val subDir = if (type == MediaType.AUDIO) Environment.DIRECTORY_MUSIC else Environment.DIRECTORY_MOVIES
 
-        val dm = downloadManager
-        var dmId = -1L
-        if (dm != null) {
-            try {
-                val request = DownloadManager.Request(parsedUri).apply {
-                    setTitle(if (!customTitle.isNullOrBlank()) customTitle else fileName)
-                    setDescription("Telechaje ak HIRIS Media Vault")
-                    setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                    setDestinationInExternalPublicDir(subDir, fileName)
-                    setAllowedOverMetered(true)
-                    setAllowedOverRoaming(true)
-                }
-                dmId = dm.enqueue(request)
-            } catch (e: Exception) {
-                // If DownloadManager public dir fails due to platform restrictions, fallback to private cache
-                try {
-                    val request = DownloadManager.Request(parsedUri).apply {
-                        setTitle(if (!customTitle.isNullOrBlank()) customTitle else fileName)
-                        setDescription("Telechaje ak HIRIS Media Vault")
-                        setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                        setDestinationInExternalFilesDir(context, subDir, fileName)
-                    }
-                    dmId = dm.enqueue(request)
-                } catch (fallbackError: Exception) {
-                    return Result.failure(fallbackError)
-                }
+        val dmId = try {
+            val request = DownloadManager.Request(parsedUri).apply {
+                setTitle(baseName)
+                setDescription("Telechaje dirèk ak HIRIS Media Vault")
+                setMimeType(if (type == MediaType.AUDIO) "audio/mpeg" else "video/mp4")
+                setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                setDestinationInExternalPublicDir(subDir, fileName)
+                setAllowedOverMetered(true)
+                setAllowedOverRoaming(true)
             }
+            dm.enqueue(request)
+        } catch (e: Exception) {
+            return Result.failure(IllegalStateException("Android pa t ka kòmanse telechajman an: ${e.localizedMessage ?: "erè enkoni"}", e))
+        }
+        if (dmId <= 0L) {
+            return Result.failure(IllegalStateException("Android pa t aksepte demann telechajman an."))
         }
 
         val newItem = MediaDownloadItem(
             id = UUID.randomUUID().toString(),
-            title = if (!customTitle.isNullOrBlank()) customTitle else fileName,
+            title = if (!customTitle.isNullOrBlank()) baseName else fileName,
             sourceUrl = trimmedUrl,
             mediaType = type,
             qualityLabel = quality,
@@ -295,6 +340,15 @@ class MediaDownloadRepository private constructor(private val context: Context) 
         val updated = listOf(newItem) + _downloads.value
         saveDownloads(updated)
         return Result.success(newItem)
+    }
+
+    fun getDownloadedFileUri(item: MediaDownloadItem): Uri? {
+        if (item.status != DownloadStatus.COMPLETED || item.downloadManagerId <= 0L) return null
+        return try {
+            downloadManager?.getUriForDownloadedFile(item.downloadManagerId)
+        } catch (_: Exception) {
+            null
+        }
     }
 
     fun removeDownload(id: String) {

@@ -217,7 +217,7 @@ fun ProfileScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "HIRIS Controller is an advanced Android cybernetic overlay companion with integrated Extensions Marketplace, Dollar & Hausdorff gesture algorithms, Arc Reactor battery animations, and real-time hardware telemetry.",
+                        text = "HIRIS Controller is an Android overlay companion with built-in modules for shortcuts, gestures, battery visualization, reminders, media downloads, notifications, and network controls.",
                         style = MaterialTheme.typography.bodySmall.copy(lineHeight = 18.sp),
                         color = TextSecondary
                     )

@@ -4,7 +4,6 @@ import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
@@ -165,7 +164,7 @@ fun CyberMediaDownloaderCard(
                 value = urlInput,
                 onValueChange = { urlInput = it },
                 label = { Text("Kole lyen videyo / odyo a (HTTP / HTTPS)") },
-                placeholder = { Text("https://example.com/video.mp4") },
+                placeholder = { Text("Lyen dirèk pou fichye .mp4 oswa .mp3") },
                 singleLine = true,
                 trailingIcon = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -200,6 +199,13 @@ fun CyberMediaDownloaderCard(
                     unfocusedTextColor = Color.White
                 ),
                 modifier = Modifier.fillMaxWidth()
+            )
+
+            Text(
+                text = "Sèvi ak lyen dirèk .mp3 oswa .mp4. Lyen paj YouTube/Instagram ak konvèsyon ant fòma pa sipòte.",
+                style = MaterialTheme.typography.labelSmall,
+                color = TextTertiary,
+                modifier = Modifier.padding(top = 6.dp)
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -340,13 +346,21 @@ fun CyberMediaDownloaderCard(
                             },
                             onOpen = {
                                 try {
+                                    val fileUri = repository.getDownloadedFileUri(item)
+                                    if (fileUri == null) {
+                                        Toast.makeText(context, "Fichye a poko telechaje oswa Android pa jwenn li.", Toast.LENGTH_SHORT).show()
+                                        return@DownloadItemRow
+                                    }
                                     val intent = Intent(Intent.ACTION_VIEW).apply {
-                                        data = Uri.parse(item.sourceUrl)
-                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        setDataAndType(
+                                            fileUri,
+                                            if (item.mediaType == MediaType.AUDIO) "audio/mpeg" else "video/mp4"
+                                        )
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
                                     }
                                     context.startActivity(intent)
                                 } catch (_: Exception) {
-                                    Toast.makeText(context, "Cannot open media URL", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Pa gen app sou telefòn nan ki ka louvri fichye sa a.", Toast.LENGTH_SHORT).show()
                                 }
                             },
                             onShare = {
@@ -478,6 +492,14 @@ private fun DownloadItemRow(
                         .fillMaxWidth()
                         .height(4.dp)
                         .clip(CircleShape)
+                )
+            }
+            if (item.errorMessage.isNotBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = item.errorMessage,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFFFCA5A5)
                 )
             }
         }

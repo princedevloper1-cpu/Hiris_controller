@@ -213,13 +213,6 @@ fun ExtensionConfigSheet(
                         isEnabled = isDrainEnabled,
                         telemetry = drainTelemetry,
                         settingsRepository = batterySettingsRepository,
-                        installedAppsRepository = installedAppsRepository,
-                        onLaunchApp = { pkg, _ ->
-                            try {
-                                val launchIntent = context.packageManager.getLaunchIntentForPackage(pkg)
-                                if (launchIntent != null) context.startActivity(launchIntent)
-                            } catch (_: Exception) {}
-                        },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

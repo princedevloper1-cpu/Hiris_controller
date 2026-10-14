@@ -216,10 +216,10 @@ class FloatingEyeOverlayController(
                         isNearLeft = isNearLeft,
                         isNearRight = isNearRight,
                         onPlusTap = {
-                            val hasAnyActive = extensionRepository.extensions.value.any { it.isInstalled && it.isActive }
+                            val hasAnyActive = extensionRepository.extensions.value.any { it.isActive }
                             val hasShortcuts = shortcutController.shortcuts.value.isNotEmpty()
                             if (!hasAnyActive && !hasShortcuts) {
-                                Toast.makeText(context, "No extensions or shortcuts active. Enable them in Extensions Market.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "No modules or shortcuts active. Enable one in Module Manager.", Toast.LENGTH_SHORT).show()
                             } else {
                                 val isOpen = shortcutController.toggleMenu()
                                 if (isOpen) {
@@ -231,7 +231,7 @@ class FloatingEyeOverlayController(
                         },
                         onPlusLongPress = {
                             if (!extensionRepository.isExtensionActive(com.example.floatingeye.extensions.repository.ExtensionRepository.ID_GESTURES)) {
-                                Toast.makeText(context, "Gesture Launch extension is turned off in Extensions Market", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Gesture Launch is turned off in Module Manager", Toast.LENGTH_SHORT).show()
                             } else {
                                 _isGestureMode.value = true
                                 lightController.triggerCyanPulse()
@@ -608,16 +608,15 @@ private fun OverlayEyeContent(
     val extensions by extensionRepository.extensions.collectAsStateWithLifecycle()
     val firewallRepository = remember { com.example.floatingeye.firewall.repository.FirewallRepository.getInstance(context) }
     val firewallServiceActive by firewallRepository.isFirewallActive.collectAsStateWithLifecycle()
-    val isBatteryActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_BATTERY }?.let { it.isInstalled && it.isActive } ?: false
-    val isDrainActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_DRAIN_MONITOR }?.let { it.isInstalled && it.isActive } ?: false
-    val isMicActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_BLUETOOTH_MIC }?.let { it.isInstalled && it.isActive } ?: false
-    val isNotifActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_NOTIFICATIONS }?.let { it.isInstalled && it.isActive } ?: false
-    val isShortcutsActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_SHORTCUTS }?.let { it.isInstalled && it.isActive } ?: false
-    val isGesturesActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_GESTURES }?.let { it.isInstalled && it.isActive } ?: false
-    val isTasksActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_TASKS }?.let { it.isInstalled && it.isActive } ?: false
-    val isDownloaderActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_DOWNLOADER }?.let { it.isInstalled && it.isActive } ?: false
-    val isFirewallInstalled = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_FIREWALL }?.isInstalled ?: false
-    val isFirewallActive = isFirewallInstalled && firewallServiceActive
+    val isBatteryActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_BATTERY }?.isActive == true
+    val isDrainActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_DRAIN_MONITOR }?.isActive == true
+    val isMicActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_BLUETOOTH_MIC }?.isActive == true
+    val isNotifActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_NOTIFICATIONS }?.isActive == true
+    val isShortcutsActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_SHORTCUTS }?.isActive == true
+    val isGesturesActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_GESTURES }?.isActive == true
+    val isTasksActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_TASKS }?.isActive == true
+    val isDownloaderActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_DOWNLOADER }?.isActive == true
+    val isFirewallActive = extensions.firstOrNull { it.id == com.example.floatingeye.extensions.repository.ExtensionRepository.ID_FIREWALL }?.isActive == true && firewallServiceActive
     val firewallRules by firewallRepository.rules.collectAsStateWithLifecycle()
     val notificationRepository = remember { com.example.floatingeye.notifications.NotificationHistoryRepository.getInstance(context) }
     val notifications by notificationRepository.notifications.collectAsStateWithLifecycle()
@@ -726,7 +725,7 @@ private fun OverlayEyeContent(
                     name = "Drain Monitor",
                     iconKey = "drain",
                     icon = Icons.Rounded.Speed,
-                    badgeText = "${drainTelemetry.currentMa}mA"
+                    badgeText = if (drainTelemetry.hasCurrentReading) "${drainTelemetry.currentMa}mA" else "N/A"
                 )
             )
         }
@@ -741,7 +740,7 @@ private fun OverlayEyeContent(
             )
         }
         // Appearance or Orbit if activated
-        extensions.filter { it.isInstalled && it.isActive && it.id !in listOf(
+        extensions.filter { it.isActive && it.id !in listOf(
             com.example.floatingeye.extensions.repository.ExtensionRepository.ID_SHORTCUTS,
             com.example.floatingeye.extensions.repository.ExtensionRepository.ID_BLUETOOTH_MIC,
             com.example.floatingeye.extensions.repository.ExtensionRepository.ID_NOTIFICATIONS,
@@ -1019,7 +1018,7 @@ private fun OverlayEyeContent(
                                     } else {
                                         Toast.makeText(
                                             context,
-                                            "Gesture Launch is disabled. Turn switch ON in Extensions Market.",
+                                            "Gesture Launch is disabled. Enable it in Module Manager.",
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     }
@@ -1085,7 +1084,11 @@ private fun OverlayEyeContent(
                                 modifier = Modifier.size(10.dp)
                             )
                             Text(
-                                text = if (drainTelemetry.isCharging) "+${drainTelemetry.currentMa}mA" else "${drainTelemetry.currentMa}mA",
+                                text = when {
+                                    !drainTelemetry.hasCurrentReading -> "N/A"
+                                    drainTelemetry.isCharging -> "+${drainTelemetry.currentMa}mA"
+                                    else -> "${drainTelemetry.currentMa}mA"
+                                },
                                 style = MaterialTheme.typography.labelSmall,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,

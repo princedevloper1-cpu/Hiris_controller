@@ -35,7 +35,6 @@ import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -45,9 +44,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -69,15 +66,13 @@ import com.example.ui.theme.TextTertiary
 @Composable
 fun ExtensionCard(
     extension: HirisExtension,
+    needsAccess: Boolean,
     onToggleActive: (Boolean) -> Unit,
-    onInstall: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var isInstalling by remember { mutableStateOf(false) }
-
     val cardBorderColor by animateColorAsState(
-        targetValue = if (extension.isInstalled && extension.isActive) {
+        targetValue = if (extension.isActive) {
             Color(0xFF1E3252)
         } else {
             Color(0xFF182236)
@@ -90,14 +85,7 @@ fun ExtensionCard(
         modifier = modifier
             .fillMaxWidth()
             .testTag("extension_card_${extension.id}")
-            .clickable {
-                if (extension.isInstalled) {
-                    onOpenSettings()
-                } else if (!isInstalling) {
-                    isInstalling = true
-                    onInstall()
-                }
-            },
+            .clickable(onClick = onOpenSettings),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFF0E1524)
@@ -116,7 +104,7 @@ fun ExtensionCard(
                     .size(46.dp)
                     .clip(RoundedCornerShape(14.dp))
                     .background(
-                        if (extension.isInstalled && extension.isActive) {
+                        if (extension.isActive) {
                             Color(0xFF14243B)
                         } else {
                             Color(0xFF111B2C)
@@ -127,10 +115,8 @@ fun ExtensionCard(
                 Icon(
                     imageVector = resolveExtensionIcon(extension.iconKey),
                     contentDescription = extension.name,
-                    tint = if (extension.isInstalled && extension.isActive) {
+                    tint = if (extension.isActive) {
                         CyanNeonPrimary
-                    } else if (!extension.isInstalled) {
-                        CyanNeonPrimary.copy(alpha = 0.85f)
                     } else {
                         Color(0xFF7E92AB)
                     },
@@ -203,113 +189,43 @@ fun ExtensionCard(
                 verticalArrangement = Arrangement.Center
             ) {
                 // Status Badge Pill
-                StatusBadge(status = extension.status)
+                StatusBadge(
+                    status = if (needsAccess) ExtensionStatus.NEEDS_ACCESS else extension.status
+                )
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // Action: Toggle switch + Gear OR Install Button
-                if (extension.isInstalled) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Switch(
-                            checked = extension.isActive,
-                            onCheckedChange = { active ->
-                                onToggleActive(active)
-                            },
-                            modifier = Modifier.testTag("toggle_${extension.id}"),
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = CyanNeonPrimary,
-                                checkedBorderColor = CyanNeonPrimary,
-                                uncheckedThumbColor = Color(0xFF8899AC),
-                                uncheckedTrackColor = Color(0xFF182335),
-                                uncheckedBorderColor = Color(0xFF28364C)
-                            )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Switch(
+                        checked = extension.isActive,
+                        onCheckedChange = onToggleActive,
+                        modifier = Modifier.testTag("toggle_${extension.id}"),
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = CyanNeonPrimary,
+                            checkedBorderColor = CyanNeonPrimary,
+                            uncheckedThumbColor = Color(0xFF8899AC),
+                            uncheckedTrackColor = Color(0xFF182335),
+                            uncheckedBorderColor = Color(0xFF28364C)
                         )
-
-                        if (extension.isActive) {
-                            IconButton(
-                                onClick = onOpenSettings,
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF142034))
-                                    .testTag("settings_${extension.id}")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Settings,
-                                    contentDescription = "Configure ${extension.name}",
-                                    tint = CyanNeonPrimary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        } else {
-                            IconButton(
-                                onClick = onOpenSettings,
-                                modifier = Modifier.size(30.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.ChevronRight,
-                                    contentDescription = "Open ${extension.name}",
-                                    tint = TextTertiary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    // Install Button
-                    Surface(
-                        onClick = {
-                            if (!isInstalling) {
-                                isInstalling = true
-                                onInstall()
-                            }
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFF0F263C),
-                        border = BorderStroke(1.dp, CyanNeonPrimary.copy(alpha = 0.85f)),
-                        modifier = Modifier.testTag("install_${extension.id}")
+                    )
+                    IconButton(
+                        onClick = onOpenSettings,
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF142034))
+                            .testTag("settings_${extension.id}")
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            if (isInstalling) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(14.dp),
-                                    strokeWidth = 2.dp,
-                                    color = CyanNeonPrimary
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Adding...",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 12.sp
-                                    ),
-                                    color = CyanNeonPrimary
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Rounded.Download,
-                                    contentDescription = "Install",
-                                    tint = CyanNeonPrimary,
-                                    modifier = Modifier.size(15.dp)
-                                )
-                                Spacer(modifier = Modifier.width(5.dp))
-                                Text(
-                                    text = "Install",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 12.sp
-                                    ),
-                                    color = CyanNeonPrimary
-                                )
-                            }
-                        }
+                        Icon(
+                            imageVector = Icons.Rounded.Settings,
+                            contentDescription = "Configure ${extension.name}",
+                            tint = if (extension.isActive) CyanNeonPrimary else TextTertiary,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }
@@ -322,7 +238,7 @@ private fun StatusBadge(status: ExtensionStatus) {
     val (dotColor, labelColor, labelText) = when (status) {
         ExtensionStatus.ACTIVE -> Triple(Color(0xFF10B981), Color(0xFF10B981), "Active")
         ExtensionStatus.OFF -> Triple(Color(0xFF64748B), Color(0xFF64748B), "Off")
-        ExtensionStatus.NEW -> Triple(CyanNeonPrimary, CyanNeonPrimary, "New")
+        ExtensionStatus.NEEDS_ACCESS -> Triple(Color(0xFFF59E0B), Color(0xFFF59E0B), "Needs access")
     }
 
     Row(
