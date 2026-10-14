@@ -154,6 +154,10 @@ fun ProfileScreen(
             }
         }
 
+        item {
+            HirisAccountCard()
+        }
+
         // System Permissions Diagnostics
         item {
             Card(
