@@ -117,7 +117,13 @@ fun HirisAccountCard(modifier: Modifier = Modifier) {
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(user!!.username, color = TextPrimary, fontWeight = FontWeight.SemiBold)
-                        Text("Signed in", color = TextTertiary, fontSize = 12.sp)
+                        Text(
+                            text = user!!.email,
+                            color = CyanNeonPrimary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text("Connected account", color = TextTertiary, fontSize = 11.sp)
                     }
                     OutlinedButton(
                         onClick = {
