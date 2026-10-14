@@ -802,6 +802,12 @@ private fun OverlayEyeContent(
                 onCollapseFullScreen()
                 shortcutController.launchShortcut(shortcut)
             },
+            onSplitLaunch = {
+                activeOverlayShortcut = null
+                isOverlayPanelMinimized = false
+                onCollapseFullScreen()
+                shortcutController.launchShortcutAdjacent(shortcut)
+            },
             onClose = {
                 activeOverlayShortcut = null
                 isOverlayPanelMinimized = false

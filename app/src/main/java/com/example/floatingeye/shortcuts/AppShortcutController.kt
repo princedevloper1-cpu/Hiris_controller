@@ -52,6 +52,12 @@ class AppShortcutController(
         return success
     }
 
+    fun launchShortcutAdjacent(shortcut: AppShortcut): Boolean {
+        val success = launchManager.launchAppAdjacent(shortcut.packageName, shortcut.displayName)
+        closeMenu()
+        return success
+    }
+
     /**
      * Calculates curved radial positions for each shortcut around the eye center.
      * Guaranteed never to place icons outside the visible screen bounds.

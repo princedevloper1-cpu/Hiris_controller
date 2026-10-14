@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Android
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.CallSplit
 import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.Minimize
 import androidx.compose.material3.Icon
@@ -44,6 +45,7 @@ fun FloatingAppShortcutWindow(
     onRestore: () -> Unit,
     onMinimize: () -> Unit,
     onMaximize: () -> Unit,
+    onSplitLaunch: () -> Unit,
     onClose: () -> Unit,
     onDrag: (Float, Float) -> Unit,
     modifier: Modifier = Modifier
@@ -97,6 +99,9 @@ fun FloatingAppShortcutWindow(
                 )
                 IconButton(onClick = onMinimize, modifier = Modifier.size(36.dp)) {
                     Icon(Icons.Rounded.Minimize, contentDescription = "Minimize", tint = TextSecondary)
+                }
+                IconButton(onClick = onSplitLaunch, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Rounded.CallSplit, contentDescription = "Open ${shortcut.displayName} in split screen", tint = CyanNeonPrimary)
                 }
                 IconButton(onClick = onMaximize, modifier = Modifier.size(36.dp)) {
                     Icon(Icons.Rounded.Fullscreen, contentDescription = "Maximize ${shortcut.displayName}", tint = CyanNeonPrimary)
