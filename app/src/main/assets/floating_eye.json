@@ -1,0 +1,46 @@
+{
+  "model": {
+    "name": "FloatingEye",
+    "assetPath": "FloatingEye.glb",
+    "version": "1.0.0",
+    "author": "Floating Eye System",
+    "description": "Interactive autonomous cybernetic ocular companion with real-time gaze deflection and luminous emissive bloom"
+  },
+  "trackingParts": [
+    "05_Eye_Lens",
+    "06_Iris",
+    "07_Iris_Cyan_Ring",
+    "08_Iris_Dark_Ring",
+    "09_Pupil",
+    "10_Highlight_Big",
+    "11_Highlight_Small"
+  ],
+  "materials": {
+    "emissiveAccent": "FE_NeonCyan",
+    "chassis": "FE_ChassisDark",
+    "sclera": "FE_Sclera",
+    "pupil": "FE_Pupil",
+    "lens": "FE_Lens",
+    "highlight": "FE_Highlight"
+  },
+  "transforms": {
+    "defaultScale": 1.2,
+    "maxDeflectionAngleXDeg": 28.0,
+    "maxDeflectionAngleYDeg": 34.0,
+    "idleFloatAmplitude": 0.08,
+    "idleFloatFrequency": 1.4,
+    "trackingInterpolationSpeed": 14.0
+  },
+  "bloom": {
+    "enabled": true,
+    "strength": 0.35,
+    "quality": "HIGH",
+    "color": "#00F0FF"
+  },
+  "interaction": {
+    "dragThresholdPx": 12.0,
+    "tapMaxDurationMs": 220,
+    "returnDamping": 0.85,
+    "hapticFeedbackOnTap": true
+  }
+}

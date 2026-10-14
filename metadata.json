@@ -1,0 +1,6 @@
+{
+  "name": "HIRIS Controller",
+  "description": "Interactive cybernetic companion with real-time gaze tracking, drag positioning, custom gestures, radial shortcuts, and battery reactions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
