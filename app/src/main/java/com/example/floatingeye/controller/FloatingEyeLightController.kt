@@ -64,6 +64,10 @@ class FloatingEyeLightController(
         _bloomStrength.value = strength.coerceIn(0f, 1f)
     }
 
+    fun setGlowIntensity(intensity: Float) {
+        _glowIntensity.value = intensity.coerceIn(0.5f, 2.5f)
+    }
+
     fun triggerCyanPulse() {
         _emissivePulse.value = 1.75f
     }

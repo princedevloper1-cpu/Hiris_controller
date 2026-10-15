@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,6 +45,7 @@ import com.example.ui.theme.CyanNeonPrimary
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import com.example.ui.theme.TextTertiary
+import com.example.R
 
 @Composable
 fun ExecutiveTopAppBar(
@@ -125,7 +127,7 @@ fun ExecutiveTopAppBar(
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = if (isFirewallActive) "SHIELD ON" else "SHIELD OFF",
+                                text = stringResource(if (isFirewallActive) R.string.shield_on else R.string.shield_off),
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = shieldColor,
@@ -135,12 +137,12 @@ fun ExecutiveTopAppBar(
                     }
 
                     Text(
-                        text = when (currentScreen) {
-                            HirisNavScreen.HOME -> "Executive System Dashboard"
-                            HirisNavScreen.EXTENSIONS -> "Module Manager"
-                            HirisNavScreen.EYE -> "HUD Optics & Calibration"
-                            HirisNavScreen.PROFILE -> "Diagnostics & Device Specs"
-                        },
+                        text = stringResource(when (currentScreen) {
+                            HirisNavScreen.HOME -> R.string.dashboard_subtitle
+                            HirisNavScreen.EXTENSIONS -> R.string.modules_subtitle
+                            HirisNavScreen.EYE -> R.string.hud_subtitle
+                            HirisNavScreen.PROFILE -> R.string.diagnostics_subtitle
+                        }),
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.Normal

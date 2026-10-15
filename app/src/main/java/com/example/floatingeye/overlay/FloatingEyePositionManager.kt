@@ -70,6 +70,13 @@ class FloatingEyePositionManager(context: Context) {
     fun getBloomStrength(defaultValue: Float = 0.35f): Float =
         prefs.getFloat(KEY_BLOOM_STRENGTH, defaultValue).coerceIn(0f, 1f)
 
+    fun saveGlowIntensity(intensity: Float) {
+        prefs.edit().putFloat(KEY_GLOW_INTENSITY, intensity.coerceIn(0.5f, 2.5f)).apply()
+    }
+
+    fun getGlowIntensity(defaultValue: Float = 1f): Float =
+        prefs.getFloat(KEY_GLOW_INTENSITY, defaultValue).coerceIn(0.5f, 2.5f)
+
     companion object {
         private const val PREFS_NAME = "floating_eye_overlay_prefs"
         private const val KEY_POS_X = "overlay_position_x"
@@ -78,5 +85,6 @@ class FloatingEyePositionManager(context: Context) {
         private const val KEY_OVERLAY_ENABLED = "overlay_is_enabled"
         private const val KEY_OVERLAY_SIZE = "overlay_size"
         private const val KEY_BLOOM_STRENGTH = "overlay_bloom_strength"
+        private const val KEY_GLOW_INTENSITY = "overlay_glow_intensity"
     }
 }

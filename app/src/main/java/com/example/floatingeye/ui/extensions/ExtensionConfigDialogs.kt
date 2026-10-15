@@ -173,10 +173,7 @@ fun ExtensionConfigSheet(
 
                 Spacer(modifier = Modifier.height(16.dp))
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState())
+                    modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())
                 ) {
             when (extension.id) {
                 ExtensionRepository.ID_CAPTURE -> {
@@ -579,11 +576,13 @@ fun BatteryReactionsConfigContent(
 // 4. Appearance Config
 @Composable
 fun FloatingEyeAppearanceSettings(
-    positionManager: FloatingEyePositionManager
+    positionManager: FloatingEyePositionManager,
+    onBloomStrengthChanged: ((Float) -> Unit)? = null
 ) {
     val context = LocalContext.current
     var selectedSize by remember { mutableStateOf(positionManager.getOverlaySize()) }
     var bloomStrength by remember { mutableFloatStateOf(positionManager.getBloomStrength()) }
+    var glowIntensity by remember { mutableFloatStateOf(positionManager.getGlowIntensity()) }
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("Floating Widget Size", style = MaterialTheme.typography.titleSmall, color = TextPrimary)
@@ -631,12 +630,35 @@ fun FloatingEyeAppearanceSettings(
         Text("Glow & Bloom Intensity", style = MaterialTheme.typography.titleSmall, color = TextPrimary)
         Slider(
             value = bloomStrength,
-            onValueChange = { bloomStrength = it },
+            onValueChange = {
+                bloomStrength = it
+                onBloomStrengthChanged?.invoke(it)
+            },
             onValueChangeFinished = {
                 positionManager.saveBloomStrength(bloomStrength)
                 com.example.floatingeye.overlay.FloatingEyeOverlayService.updateBloomStrength(context, bloomStrength)
             },
             valueRange = 0f..1f,
+            colors = SliderDefaults.colors(
+                thumbColor = CyanNeonPrimary,
+                activeTrackColor = CyanNeonPrimary,
+                inactiveTrackColor = Color(0xFF1B273A)
+            )
+        )
+
+        Text(
+            text = "Atmospheric Glow: ${(glowIntensity * 100).toInt()}%",
+            style = MaterialTheme.typography.titleSmall,
+            color = TextPrimary
+        )
+        Slider(
+            value = glowIntensity,
+            onValueChange = { value ->
+                glowIntensity = value
+                positionManager.saveGlowIntensity(value)
+                com.example.floatingeye.overlay.FloatingEyeOverlayService.updateGlowIntensity(context, value)
+            },
+            valueRange = 0.5f..2.5f,
             colors = SliderDefaults.colors(
                 thumbColor = CyanNeonPrimary,
                 activeTrackColor = CyanNeonPrimary,

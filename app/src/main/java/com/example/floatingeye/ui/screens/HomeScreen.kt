@@ -115,7 +115,7 @@ fun HomeScreen(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Cybernetic Assistant Dashboard",
+                    text = androidx.compose.ui.res.stringResource(com.example.R.string.home_dashboard_tagline),
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Medium
@@ -143,7 +143,7 @@ fun HomeScreen(
                     ) {
                         Column {
                             Text(
-                                text = "Floating Companion",
+                                text = androidx.compose.ui.res.stringResource(com.example.R.string.home_floating_companion),
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 18.sp
@@ -152,7 +152,7 @@ fun HomeScreen(
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = if (isOverlayRunning) "Active on your screen" else "Overlay currently stopped",
+                                text = androidx.compose.ui.res.stringResource(if (isOverlayRunning) com.example.R.string.home_active_screen else com.example.R.string.home_overlay_stopped),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = if (isOverlayRunning) CyanNeonPrimary else TextSecondary
                             )
@@ -379,12 +379,12 @@ fun HomeScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Manage modules",
+                            text = androidx.compose.ui.res.stringResource(com.example.R.string.home_manage_modules),
                             style = MaterialTheme.typography.titleMedium,
                             color = TextPrimary
                         )
                         Text(
-                            text = "Built-in tools for productivity, security, and device controls",
+                            text = androidx.compose.ui.res.stringResource(com.example.R.string.home_tools_description),
                             style = MaterialTheme.typography.bodySmall,
                             color = TextSecondary,
                             fontSize = 12.sp

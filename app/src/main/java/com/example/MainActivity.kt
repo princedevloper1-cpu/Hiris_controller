@@ -12,13 +12,19 @@ import com.example.floatingeye.model.FloatingEyeConfig
 import com.example.floatingeye.overlay.FloatingEyePositionManager
 import com.example.floatingeye.ui.HirisMainScreen
 import com.example.ui.theme.FloatingEyeTheme
+import com.example.localization.AppLanguage
 
 class MainActivity : ComponentActivity() {
     private var targetExtensionId by mutableStateOf<String?>(null)
     private var firewallVpnRequestId by mutableStateOf(0)
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(AppLanguage.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        LegacyCleanWorkCleanup.run(this)
         enableEdgeToEdge()
 
         val positionManager = FloatingEyePositionManager(this)

@@ -710,7 +710,7 @@ private fun HeaderRow(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "Module Manager",
+                text = androidx.compose.ui.res.stringResource(com.example.R.string.extension_module_manager),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = 13.5.sp,
                     fontWeight = FontWeight.Medium
@@ -868,7 +868,7 @@ private fun ModuleSummaryCard(moduleCount: Int, activeCount: Int) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "HIRIS Modules",
+                    text = androidx.compose.ui.res.stringResource(com.example.R.string.extension_hiris_modules),
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.5.sp
@@ -936,7 +936,7 @@ private fun EmptyExtensionsView(
                     shape = RoundedCornerShape(10.dp),
                     border = BorderStroke(1.dp, CyanNeonPrimary)
                 ) {
-                    Text("Clear Search", color = CyanNeonPrimary, fontSize = 12.sp)
+                    Text(androidx.compose.ui.res.stringResource(com.example.R.string.extension_clear_search), color = CyanNeonPrimary, fontSize = 12.sp)
                 }
             }
         }

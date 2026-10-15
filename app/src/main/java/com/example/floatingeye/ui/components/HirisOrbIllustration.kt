@@ -40,7 +40,9 @@ import kotlin.math.sin
 fun HirisOrbIllustration(
     modifier: Modifier = Modifier,
     size: Dp = 100.dp,
-    animated: Boolean = true
+    animated: Boolean = true,
+    glowMultiplier: Float = 1f,
+    bloomStrength: Float = 0.35f
 ) {
     val transition = rememberInfiniteTransition(label = "OrbTransition")
 
@@ -73,6 +75,24 @@ fun HirisOrbIllustration(
             val height = this.size.height
             val center = Offset(width * 0.5f, height * 0.5f)
             val outerRadius = width * 0.42f
+            val safeGlow = glowMultiplier.coerceIn(0.5f, 2.5f)
+            val safeBloom = bloomStrength.coerceIn(0f, 1f)
+            val glowAlpha = (0.08f + safeBloom * 0.22f) * safeGlow * pulseGlow
+
+            // Atmospheric halo, controlled by Eye Studio's glow and bloom settings.
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFF00E5FF).copy(alpha = glowAlpha.coerceIn(0f, 0.75f)),
+                        Color(0xFF00E5FF).copy(alpha = (glowAlpha * 0.32f).coerceIn(0f, 0.35f)),
+                        Color.Transparent
+                    ),
+                    center = center,
+                    radius = outerRadius * (1.35f + safeGlow * 0.22f)
+                ),
+                radius = outerRadius * (1.35f + safeGlow * 0.22f),
+                center = center
+            )
 
             // 1. Ambient Drop Shadow
             drawCircle(

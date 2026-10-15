@@ -49,6 +49,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -69,10 +70,12 @@ fun EyeStudioScreen(
     positionManager: FloatingEyePositionManager,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     var touchX by remember { mutableFloatStateOf(0f) }
     var touchY by remember { mutableFloatStateOf(0f) }
     var isTrackingGaze by remember { mutableStateOf(false) }
-    var bloomMultiplier by remember { mutableFloatStateOf(1.0f) }
+    var bloomMultiplier by remember { mutableFloatStateOf(positionManager.getGlowIntensity()) }
+    var bloomStrength by remember { mutableFloatStateOf(positionManager.getBloomStrength()) }
     var selectedColorIndex by remember { mutableStateOf(0) }
 
     val neonColorPresets = listOf(
@@ -192,7 +195,9 @@ fun EyeStudioScreen(
                     ) {
                         HirisOrbIllustration(
                             size = 140.dp,
-                            animated = true
+                            animated = true,
+                            glowMultiplier = bloomMultiplier,
+                            bloomStrength = bloomStrength
                         )
 
                         // Floating instruction HUD
@@ -232,7 +237,10 @@ fun EyeStudioScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Floating Eye Appearance", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
                     Spacer(modifier = Modifier.height(12.dp))
-                    FloatingEyeAppearanceSettings(positionManager = positionManager)
+                    FloatingEyeAppearanceSettings(
+                        positionManager = positionManager,
+                        onBloomStrengthChanged = { bloomStrength = it }
+                    )
                 }
             }
         }
@@ -283,7 +291,13 @@ fun EyeStudioScreen(
                     )
                     Slider(
                         value = bloomMultiplier,
-                        onValueChange = { bloomMultiplier = it },
+                        onValueChange = {
+                            bloomMultiplier = it
+                            positionManager.saveGlowIntensity(it)
+                            com.example.floatingeye.overlay.FloatingEyeOverlayService.updateGlowIntensity(
+                                context, it
+                            )
+                        },
                         valueRange = 0.5f..2.5f,
                         colors = SliderDefaults.colors(
                             thumbColor = CyanNeonPrimary,

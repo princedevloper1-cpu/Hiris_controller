@@ -43,12 +43,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.activity.ComponentActivity
+import com.example.localization.AppLanguage
+import com.example.R
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -70,6 +75,7 @@ fun ProfileScreen(
     val hasOverlay = OverlayPermissionManager.canDrawOverlays(context)
     val hasNotif = NotificationPermissionHelper.isNotificationAccessGranted(context)
     val hasMic = micController.hasRecordPermission()
+    val languageTag = AppLanguage.currentTag(context).substringBefore('-')
 
     LazyColumn(
         modifier = modifier
@@ -82,7 +88,7 @@ fun ProfileScreen(
         item {
             Column(modifier = Modifier.padding(top = 10.dp, bottom = 4.dp)) {
                 Text(
-                    text = "Profile & System",
+                    text = stringResource(R.string.profile_system_title),
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 24.sp
@@ -91,13 +97,35 @@ fun ProfileScreen(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "System Diagnostics, Permissions & Device Info",
+                    text = stringResource(R.string.profile_system_subtitle),
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Medium
                     ),
                     color = Color(0xFF7E90A6)
                 )
+            }
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF111A2A)),
+                shape = RoundedCornerShape(18.dp),
+                border = BorderStroke(1.dp, Color(0xFF27364E))
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(stringResource(R.string.language_title), style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.language_description), style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { (context as? ComponentActivity)?.let { AppLanguage.setLanguage(it, "en") } }) {
+                            Text(if (languageTag == "en") stringResource(R.string.language_english_selected) else stringResource(R.string.language_english))
+                        }
+                        OutlinedButton(onClick = { (context as? ComponentActivity)?.let { AppLanguage.setLanguage(it, "fr") } }) {
+                            Text(if (languageTag == "fr") stringResource(R.string.language_french_selected) else stringResource(R.string.language_french))
+                        }
+                    }
+                }
             }
         }
 
@@ -168,7 +196,7 @@ fun ProfileScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        text = "System Permissions Hub",
+                        text = stringResource(R.string.system_permissions),
                         style = MaterialTheme.typography.titleMedium,
                         color = TextPrimary
                     )
@@ -215,7 +243,7 @@ fun ProfileScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "About HIRIS Controller",
+                        text = stringResource(R.string.about_hiris),
                         style = MaterialTheme.typography.titleMedium,
                         color = TextPrimary
                     )

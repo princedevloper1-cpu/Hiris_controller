@@ -84,6 +84,13 @@ class FloatingEyeOverlayService : Service(), LifecycleOwner, ViewModelStoreOwner
                 }
             }
 
+            ACTION_UPDATE_GLOW_INTENSITY -> {
+                val intensity = intent?.getFloatExtra(EXTRA_GLOW_INTENSITY, Float.NaN) ?: Float.NaN
+                if (intensity.isFinite()) {
+                    overlayController.updateGlowIntensity(intensity)
+                }
+            }
+
             ACTION_START -> {
                 startForegroundWithNotification(isEyeVisible = true)
                 overlayController.showOverlay(
@@ -220,8 +227,10 @@ class FloatingEyeOverlayService : Service(), LifecycleOwner, ViewModelStoreOwner
         const val ACTION_TOGGLE_VISIBILITY = "com.example.floatingeye.action.TOGGLE_VISIBILITY"
         const val ACTION_UPDATE_SIZE = "com.example.floatingeye.action.UPDATE_SIZE"
         const val ACTION_UPDATE_BLOOM_STRENGTH = "com.example.floatingeye.action.UPDATE_BLOOM_STRENGTH"
+        const val ACTION_UPDATE_GLOW_INTENSITY = "com.example.floatingeye.action.UPDATE_GLOW_INTENSITY"
         const val EXTRA_SIZE_NAME = "extra_size_name"
         const val EXTRA_BLOOM_STRENGTH = "extra_bloom_strength"
+        const val EXTRA_GLOW_INTENSITY = "extra_glow_intensity"
 
         private val _isServiceRunning = MutableStateFlow(false)
         val isServiceRunning: StateFlow<Boolean> = _isServiceRunning.asStateFlow()
@@ -264,6 +273,15 @@ class FloatingEyeOverlayService : Service(), LifecycleOwner, ViewModelStoreOwner
             val intent = Intent(context, FloatingEyeOverlayService::class.java).apply {
                 action = ACTION_UPDATE_BLOOM_STRENGTH
                 putExtra(EXTRA_BLOOM_STRENGTH, strength.coerceIn(0f, 1f))
+            }
+            context.startService(intent)
+        }
+
+        fun updateGlowIntensity(context: Context, intensity: Float) {
+            if (!_isServiceRunning.value) return
+            val intent = Intent(context, FloatingEyeOverlayService::class.java).apply {
+                action = ACTION_UPDATE_GLOW_INTENSITY
+                putExtra(EXTRA_GLOW_INTENSITY, intensity.coerceIn(0.5f, 2.5f))
             }
             context.startService(intent)
         }

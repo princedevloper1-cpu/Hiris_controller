@@ -25,8 +25,8 @@ class ExtensionRepository(
     private val defaultExtensions = listOf(
         HirisExtension(
             id = ID_SHORTCUTS,
-            name = "Shortcuts",
-            description = "Radial app launcher around HIRIS.",
+            name = context.getString(com.example.R.string.ext_shortcuts_name),
+            description = context.getString(com.example.R.string.ext_shortcuts_desc),
             categoryTags = listOf("Productivity", "Launcher"),
             category = ExtensionCategory.PRODUCTIVITY,
             iconKey = "shortcuts",
@@ -34,8 +34,8 @@ class ExtensionRepository(
         ),
         HirisExtension(
             id = ID_GESTURES,
-            name = "Gesture Launch",
-            description = "Draw a symbol to open an app.",
+            name = context.getString(com.example.R.string.ext_gestures_name),
+            description = context.getString(com.example.R.string.ext_gestures_desc),
             categoryTags = listOf("Gestures", "Productivity"),
             category = ExtensionCategory.PRODUCTIVITY,
             iconKey = "gestures",
@@ -43,8 +43,8 @@ class ExtensionRepository(
         ),
         HirisExtension(
             id = ID_BATTERY,
-            name = "Battery Reactions",
-            description = "Light behavior based on battery state.",
+            name = context.getString(com.example.R.string.ext_battery_name),
+            description = context.getString(com.example.R.string.ext_battery_desc),
             categoryTags = listOf("Visualization", "System"),
             category = ExtensionCategory.VISUALIZATION,
             iconKey = "battery",
@@ -52,8 +52,8 @@ class ExtensionRepository(
         ),
         HirisExtension(
             id = ID_DRAIN_MONITOR,
-            name = "Power Drain Monitor",
-            description = "Estimate live battery impact of active apps.",
+            name = context.getString(com.example.R.string.ext_drain_name),
+            description = context.getString(com.example.R.string.ext_drain_desc),
             categoryTags = listOf("System", "Monitoring"),
             category = ExtensionCategory.SYSTEM,
             iconKey = "drain",
@@ -61,8 +61,8 @@ class ExtensionRepository(
         ),
         HirisExtension(
             id = ID_BLUETOOTH_MIC,
-            name = "Bluetooth Mic",
-            description = "Live audio loopback & streaming from HIRIS.",
+            name = context.getString(com.example.R.string.ext_mic_name),
+            description = context.getString(com.example.R.string.ext_mic_desc),
             categoryTags = listOf("Audio", "Utilities"),
             category = ExtensionCategory.UTILITIES,
             iconKey = "mic",
@@ -70,8 +70,8 @@ class ExtensionRepository(
         ),
         HirisExtension(
             id = ID_NOTIFICATIONS,
-            name = "Notification Sentinel",
-            description = "Capture & preserve incoming system notifications.",
+            name = context.getString(com.example.R.string.ext_notifications_name),
+            description = context.getString(com.example.R.string.ext_notifications_desc),
             categoryTags = listOf("System", "Utilities"),
             category = ExtensionCategory.UTILITIES,
             iconKey = "notifications",
@@ -79,8 +79,8 @@ class ExtensionRepository(
         ),
         HirisExtension(
             id = ID_TASKS,
-            name = "Tasks & Reminders",
-            description = "Plan tasks, choose date & time, and receive smart alarms.",
+            name = context.getString(com.example.R.string.ext_tasks_name),
+            description = context.getString(com.example.R.string.ext_tasks_desc),
             categoryTags = listOf("Productivity", "Reminders", "Tasks"),
             category = ExtensionCategory.PRODUCTIVITY,
             iconKey = "tasks",
@@ -88,8 +88,8 @@ class ExtensionRepository(
         ),
         HirisExtension(
             id = ID_CAPTURE,
-            name = "Hiris Capture",
-            description = "Capture screenshots and record the screen with Android screen-capture permission.",
+            name = context.getString(com.example.R.string.ext_capture_name),
+            description = context.getString(com.example.R.string.ext_capture_desc),
             categoryTags = listOf("Screen", "Screenshot", "Recording"),
             category = ExtensionCategory.UTILITIES,
             iconKey = "capture",
@@ -97,8 +97,8 @@ class ExtensionRepository(
         ),
         HirisExtension(
             id = ID_FIREWALL,
-            name = "Firewall & App Blocker",
-            description = "Block mobile data or Wi-Fi for apps like WhatsApp & Facebook to stop background data.",
+            name = context.getString(com.example.R.string.ext_firewall_name),
+            description = context.getString(com.example.R.string.ext_firewall_desc),
             categoryTags = listOf("Network", "Security", "Firewall"),
             category = ExtensionCategory.SYSTEM,
             iconKey = "firewall",

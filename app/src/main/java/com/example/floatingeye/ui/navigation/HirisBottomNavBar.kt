@@ -25,6 +25,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
+import com.example.R
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -39,11 +42,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.CyanNeonPrimary
 
-enum class HirisNavScreen(val label: String, val icon: ImageVector) {
-    HOME("Dashboard", Icons.Rounded.Dashboard),
-    EXTENSIONS("Modules", Icons.Rounded.Widgets),
-    EYE("HUD Studio", Icons.Rounded.Visibility),
-    PROFILE("System", Icons.Rounded.Settings)
+enum class HirisNavScreen(@StringRes val labelRes: Int, val icon: ImageVector) {
+    HOME(R.string.nav_dashboard, Icons.Rounded.Dashboard),
+    EXTENSIONS(R.string.nav_extensions, Icons.Rounded.Widgets),
+    EYE(R.string.nav_hud_studio, Icons.Rounded.Visibility),
+    PROFILE(R.string.nav_profile, Icons.Rounded.Settings)
 }
 
 @Composable
@@ -73,6 +76,7 @@ fun HirisBottomNavBar(
             horizontalArrangement = Arrangement.SpaceAround
         ) {
             HirisNavScreen.values().forEach { screen ->
+                val label = stringResource(screen.labelRes)
                 val isSelected = currentScreen == screen
 
                 val iconColor by animateColorAsState(
@@ -102,7 +106,7 @@ fun HirisBottomNavBar(
                 ) {
                     Icon(
                         imageVector = screen.icon,
-                        contentDescription = screen.label,
+                        contentDescription = label,
                         tint = iconColor,
                         modifier = Modifier.size(23.dp)
                     )
@@ -110,7 +114,7 @@ fun HirisBottomNavBar(
                     Spacer(modifier = Modifier.height(2.dp))
 
                     Text(
-                        text = screen.label,
+                        text = label,
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                             fontSize = 11.5.sp

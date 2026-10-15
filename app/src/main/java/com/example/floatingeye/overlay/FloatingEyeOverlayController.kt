@@ -101,6 +101,9 @@ class FloatingEyeOverlayController(
         config.bloomEnabled,
         positionManager.getBloomStrength(config.bloomStrength)
     )
+    init {
+        lightController.setGlowIntensity(positionManager.getGlowIntensity())
+    }
     val eyeController = FloatingEyeController(config, lightController)
 
     val shortcutRepository = AppShortcutRepository(context)
@@ -536,6 +539,12 @@ class FloatingEyeOverlayController(
         lightController.setBloomStrength(safeStrength)
     }
 
+    fun updateGlowIntensity(intensity: Float) {
+        val safeIntensity = intensity.coerceIn(0.5f, 2.5f)
+        positionManager.saveGlowIntensity(safeIntensity)
+        lightController.setGlowIntensity(safeIntensity)
+    }
+
     fun removeOverlay() {
         overlayComposeView?.let { view ->
             try {
@@ -746,7 +755,7 @@ private fun OverlayEyeContent(
             com.example.floatingeye.extensions.repository.ExtensionRepository.ID_GESTURES,
             com.example.floatingeye.extensions.repository.ExtensionRepository.ID_TASKS,
             com.example.floatingeye.extensions.repository.ExtensionRepository.ID_FIREWALL,
-            com.example.floatingeye.extensions.repository.ExtensionRepository.ID_CAPTURE
+            com.example.floatingeye.extensions.repository.ExtensionRepository.ID_CAPTURE,
         ) }.forEach { ext ->
             list.add(
                 ActiveExtensionItem(
