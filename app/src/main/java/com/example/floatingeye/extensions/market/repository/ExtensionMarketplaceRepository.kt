@@ -1,23 +1,29 @@
 package com.example.floatingeye.extensions.market.repository
 
-import android.content.ContentValues
 import android.content.Context
-import android.os.Build
-import android.os.Environment
-import android.provider.MediaStore
 import com.example.floatingeye.extensions.market.data.HirisExtensionsApi
+import com.example.floatingeye.extensions.market.model.LocalExtensionPackage
 import com.example.floatingeye.extensions.market.model.MarketplaceDownload
 import com.example.floatingeye.extensions.market.model.MarketplaceExtension
 import com.example.floatingeye.extensions.market.model.MarketplaceOperationResult
 import com.example.floatingeye.extensions.market.model.MarketplaceUploadFile
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 
-/** Coordinates marketplace requests and stores downloaded packages without executing them. */
-class ExtensionMarketplaceRepository(
+/** Handles the online market and a persistent, app-private library of downloaded packages. */
+class ExtensionMarketplaceRepository private constructor(
     context: Context,
     private val api: HirisExtensionsApi = HirisExtensionsApi()
 ) {
     private val appContext = context.applicationContext
+    private val preferences = appContext.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+    private val packageDirectory = File(appContext.filesDir, "hiris_extensions")
+    private val _installedPackages = MutableStateFlow(loadInstalledPackages())
+    val installedPackages: StateFlow<List<LocalExtensionPackage>> = _installedPackages.asStateFlow()
 
     suspend fun list(token: String): List<MarketplaceExtension> = api.list(token)
 
@@ -45,62 +51,113 @@ class ExtensionMarketplaceRepository(
         return storePackage(downloaded)
     }
 
-    private fun storePackage(download: MarketplaceDownload): MarketplaceOperationResult {
-        val filename = safeFilename(download.filename.ifBlank { download.extension.filename })
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            storeInPublicDownloads(download, filename)
-        } else {
-            storeInAppDownloads(download, filename)
-        }
+    fun removeLocal(extensionId: String) {
+        val removed = _installedPackages.value.firstOrNull { it.extension.id == extensionId } ?: return
+        File(packageDirectory, removed.storedFilename).delete()
+        val updated = _installedPackages.value.filterNot { it.extension.id == extensionId }
+        persist(updated)
+        _installedPackages.value = updated
     }
 
-    private fun storeInPublicDownloads(
-        download: MarketplaceDownload,
-        filename: String
-    ): MarketplaceOperationResult {
-        val values = ContentValues().apply {
-            put(MediaStore.Downloads.DISPLAY_NAME, filename)
-            put(MediaStore.Downloads.MIME_TYPE, download.contentType)
-            put(MediaStore.Downloads.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/HIRIS Extensions")
-            put(MediaStore.Downloads.IS_PENDING, 1)
+    private fun storePackage(download: MarketplaceDownload): MarketplaceOperationResult {
+        if (!packageDirectory.exists() && !packageDirectory.mkdirs()) {
+            throw IllegalStateException("Could not create HIRIS's local extensions folder.")
         }
-        val resolver = appContext.contentResolver
-        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-            ?: throw IllegalStateException("Could not create the download file.")
+        val filename = safeFilename(download.filename.ifBlank { download.extension.filename })
+        val storedFilename = "${safeFilename(download.extension.id)}__$filename"
+        val target = File(packageDirectory, storedFilename)
+        val temporary = File(packageDirectory, "$storedFilename.tmp")
         try {
-            resolver.openOutputStream(uri)?.use { output -> output.write(download.bytes) }
-                ?: throw IllegalStateException("Could not write the downloaded extension.")
-            val ready = ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }
-            resolver.update(uri, ready, null, null)
+            temporary.writeBytes(download.bytes)
+            if (!temporary.renameTo(target)) {
+                temporary.copyTo(target, overwrite = true)
+                temporary.delete()
+            }
         } catch (error: Exception) {
-            resolver.delete(uri, null, null)
+            temporary.delete()
             throw error
         }
+
+        val updated = _installedPackages.value
+            .filterNot { it.extension.id == download.extension.id } +
+            LocalExtensionPackage(download.extension, storedFilename)
+        persist(updated)
+        _installedPackages.value = updated
         return MarketplaceOperationResult(
-            savedLocation = "Downloads/HIRIS Extensions",
+            savedLocation = "HIRIS Controller > My extensions",
             filename = filename
         )
     }
 
-    @Suppress("DEPRECATION")
-    private fun storeInAppDownloads(
-        download: MarketplaceDownload,
-        filename: String
-    ): MarketplaceOperationResult {
-        val directory = appContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-            ?: File(appContext.filesDir, Environment.DIRECTORY_DOWNLOADS)
-        if (!directory.exists() && !directory.mkdirs()) {
-            throw IllegalStateException("Could not create the download folder.")
+    private fun loadInstalledPackages(): List<LocalExtensionPackage> {
+        val array = runCatching { JSONArray(preferences.getString(KEY_PACKAGES, "[]")) }.getOrNull()
+            ?: return emptyList()
+        return buildList {
+            for (index in 0 until array.length()) {
+                val entry = runCatching { array.getJSONObject(index) }.getOrNull() ?: continue
+                val storedFilename = entry.optString("storedFilename")
+                if (storedFilename.isBlank() || !File(packageDirectory, storedFilename).isFile) continue
+                val metadata = runCatching { entry.getJSONObject("extension") }.getOrNull() ?: continue
+                val extension = runCatching { parseExtension(metadata) }.getOrNull() ?: continue
+                add(LocalExtensionPackage(extension, storedFilename))
+            }
         }
-        File(directory, filename).writeBytes(download.bytes)
-        return MarketplaceOperationResult(
-            savedLocation = directory.absolutePath,
-            filename = filename
-        )
     }
+
+    private fun persist(packages: List<LocalExtensionPackage>) {
+        val array = JSONArray()
+        packages.forEach { local ->
+            array.put(
+                JSONObject()
+                    .put("storedFilename", local.storedFilename)
+                    .put("extension", local.extension.toJson())
+            )
+        }
+        preferences.edit().putString(KEY_PACKAGES, array.toString()).apply()
+    }
+
+    private fun MarketplaceExtension.toJson() = JSONObject()
+        .put("id", id)
+        .put("name", name)
+        .put("description", description)
+        .put("version", version)
+        .put("filename", filename)
+        .put("contentType", contentType)
+        .put("size", size)
+        .put("downloads", downloads)
+        .put("author", author)
+        .put("created_at", createdAt)
+        .put("updated_at", updatedAt)
+
+    private fun parseExtension(json: JSONObject) = MarketplaceExtension(
+        id = json.getString("id"),
+        name = json.getString("name"),
+        description = json.optString("description", ""),
+        version = json.getString("version"),
+        filename = json.getString("filename"),
+        contentType = json.optString("contentType", "application/octet-stream"),
+        size = json.optLong("size", 0),
+        downloads = json.optInt("downloads", 0),
+        author = json.optString("author", ""),
+        createdAt = json.optString("created_at", ""),
+        updatedAt = json.optString("updated_at", "")
+    )
 
     private fun safeFilename(filename: String): String =
         filename.substringAfterLast('/').substringAfterLast('\\')
             .replace(Regex("[^A-Za-z0-9._ -]"), "_")
             .ifBlank { "extension.bin" }
+
+    companion object {
+        private const val PREFERENCES = "hiris_extension_marketplace"
+        private const val KEY_PACKAGES = "downloaded_packages"
+
+        @Volatile
+        private var instance: ExtensionMarketplaceRepository? = null
+
+        fun getInstance(context: Context): ExtensionMarketplaceRepository =
+            instance ?: synchronized(this) {
+                instance ?: ExtensionMarketplaceRepository(context.applicationContext).also { instance = it }
+            }
+    }
 }

@@ -31,3 +31,8 @@ data class MarketplaceOperationResult(
     val savedLocation: String,
     val filename: String
 )
+
+data class LocalExtensionPackage(
+    val extension: MarketplaceExtension,
+    val storedFilename: String
+)

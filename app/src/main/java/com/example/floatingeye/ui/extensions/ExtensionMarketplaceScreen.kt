@@ -73,7 +73,7 @@ import java.io.ByteArrayOutputStream
 fun ExtensionMarketplaceScreen(onBackToInstalled: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val repository = remember(context) { ExtensionMarketplaceRepository(context) }
+    val repository = remember(context) { ExtensionMarketplaceRepository.getInstance(context) }
     var extensions by remember { mutableStateOf<List<MarketplaceExtension>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var isWorking by remember { mutableStateOf(false) }
@@ -156,7 +156,7 @@ fun ExtensionMarketplaceScreen(onBackToInstalled: () -> Unit) {
                 ) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(
-                            "Extensions you download are saved in Downloads/HIRIS Extensions. HIRIS does not run uploaded files as code.",
+                            "Downloaded extensions stay in HIRIS Controller > My extensions on this phone. HIRIS does not run package files as code.",
                             color = TextSecondary,
                             style = MaterialTheme.typography.bodySmall
                         )

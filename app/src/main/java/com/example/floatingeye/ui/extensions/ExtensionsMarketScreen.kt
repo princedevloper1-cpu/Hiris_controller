@@ -36,6 +36,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Clear
+import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Search
@@ -82,6 +83,7 @@ import com.example.floatingeye.battery.FloatingEyeBatteryController
 import com.example.floatingeye.extensions.model.ExtensionCategory
 import com.example.floatingeye.extensions.model.HirisExtension
 import com.example.floatingeye.extensions.repository.ExtensionRepository
+import com.example.floatingeye.extensions.market.repository.ExtensionMarketplaceRepository
 import com.example.floatingeye.gestures.GestureRepository
 import com.example.floatingeye.gestures.GestureSetupFlowDialog
 import com.example.floatingeye.model.FloatingEyeConfig
@@ -125,6 +127,8 @@ fun ExtensionsMarketScreen(
     val isPlaying by micController.isMicPlaying.collectAsStateWithLifecycle()
     val notificationsList by notificationRepository.notifications.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val marketplaceRepository = remember(context) { ExtensionMarketplaceRepository.getInstance(context) }
+    val downloadedPackages by marketplaceRepository.installedPackages.collectAsStateWithLifecycle()
     val effectiveTaskRepo = taskRepository ?: remember { TaskRepository.getInstance(context) }
 
     var selectedFilter by remember { mutableStateOf(ModuleFilter.ALL) }
@@ -388,6 +392,59 @@ fun ExtensionsMarketScreen(
                     moduleCount = extensions.size,
                     activeCount = extensions.count { it.isActive }
                 )
+            }
+
+            if (downloadedPackages.isNotEmpty()) {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            "My downloaded extensions",
+                            color = TextPrimary,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "Saved locally on this phone",
+                            color = TextSecondary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+                items(
+                    items = downloadedPackages,
+                    key = { "local_market_${it.extension.id}" }
+                ) { localPackage ->
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color(0xFF0E1524),
+                        border = BorderStroke(1.dp, Color(0xFF1C3652)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 8.dp, bottom = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(localPackage.extension.name, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    "Version ${localPackage.extension.version} · ${localPackage.extension.filename}",
+                                    color = CyanNeonPrimary,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                                if (localPackage.extension.description.isNotBlank()) {
+                                    Text(localPackage.extension.description, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                                }
+                                Text("Downloaded · stored in HIRIS", color = TextTertiary, style = MaterialTheme.typography.labelSmall)
+                            }
+                            IconButton(onClick = {
+                                marketplaceRepository.removeLocal(localPackage.extension.id)
+                                Toast.makeText(context, "Removed from My downloaded extensions", Toast.LENGTH_SHORT).show()
+                            }) {
+                                Icon(Icons.Rounded.DeleteOutline, contentDescription = "Remove ${localPackage.extension.name}", tint = TextTertiary)
+                            }
+                        }
+                    }
+                }
             }
 
             // 3b. Active Extension Live Status Banner (Bluetooth Mic & Notifications)
