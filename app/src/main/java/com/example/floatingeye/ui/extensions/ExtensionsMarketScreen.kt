@@ -36,6 +36,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Clear
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Tune
@@ -131,6 +132,7 @@ fun ExtensionsMarketScreen(
     var isSearchOpen by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf(ExtensionCategory.ALL) }
     var showFilterChips by remember { mutableStateOf(false) }
+    var showOnlineMarketplace by remember { mutableStateOf(false) }
     var permissionCheckVersion by remember { mutableIntStateOf(0) }
 
     // Configuration Sheet State
@@ -154,6 +156,11 @@ fun ExtensionsMarketScreen(
     }
     var showAppPicker by remember { mutableStateOf(false) }
     var showGestureSetup by remember { mutableStateOf(false) }
+
+    if (showOnlineMarketplace) {
+        ExtensionMarketplaceScreen(onBackToInstalled = { showOnlineMarketplace = false })
+        return
+    }
 
     fun startMicStreaming() {
         if (micController.startStreaming()) {
@@ -262,6 +269,29 @@ fun ExtensionsMarketScreen(
                     showFilterChips = showFilterChips,
                     onToggleFilters = { showFilterChips = !showFilterChips }
                 )
+            }
+
+            item {
+                Surface(
+                    onClick = { showOnlineMarketplace = true },
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color(0xFF101B2B),
+                    border = BorderStroke(1.dp, Color(0xFF1C3652)),
+                    modifier = Modifier.fillMaxWidth().testTag("open_extension_market")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(Icons.Rounded.Download, contentDescription = null, tint = CyanNeonPrimary, modifier = Modifier.size(20.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Extension Market", color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                            Text("Browse or manage online packages", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                        }
+                        Text("Open", color = CyanNeonPrimary, style = MaterialTheme.typography.labelLarge)
+                    }
+                }
             }
 
             // 1b. Search Input (Animated Visibility)

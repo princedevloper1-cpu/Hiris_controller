@@ -20,7 +20,7 @@ data class HirisUser(
 data class HirisAuthResult(val token: String, val user: HirisUser)
 
 object HirisAuth {
-    private const val BASE_URL = "https://hiris-controller-api.buisserethjohnpeter80.workers.dev"
+    private const val BASE_URL = HirisApiConfig.BASE_URL
     private const val PREFS = "hiris_auth"
     private const val KEY_TOKEN = "token"
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
