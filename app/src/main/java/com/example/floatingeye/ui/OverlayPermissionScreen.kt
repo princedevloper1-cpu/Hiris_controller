@@ -116,7 +116,7 @@ fun OverlayPermissionScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
-                    text = "HIRIS Controller operates as a floating cybernetic companion. Grant overlay permission so the (+) button and gesture canvas can float over any open screen.",
+                    text = "Allow HIRIS to show the floating button and gesture controls over other apps.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary,
                     textAlign = TextAlign.Center,

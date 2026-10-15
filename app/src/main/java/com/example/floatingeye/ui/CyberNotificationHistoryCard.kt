@@ -387,7 +387,7 @@ fun CyberNotificationHistoryCard(
                             )
                         }
                         Text(
-                            text = "To allow Hiris Controller to capture notifications and incoming message media, please grant notification access in system settings.",
+                            text = "Allow notification access to save notifications and message media.",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFFFDE68A).copy(alpha = 0.9f)
                         )
@@ -457,7 +457,7 @@ fun CyberNotificationHistoryCard(
                     }
 
                     Text(
-                        text = "Choose how long captured messages and media are stored before auto-deletion:",
+                        text = "Choose how long saved messages and media are kept.",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
                     )

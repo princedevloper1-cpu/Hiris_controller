@@ -106,7 +106,7 @@ fun EyeStudioScreen(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Interactive 3D Gaze & Cybernetic Stage",
+                    text = "Interactive Eye Studio",
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Medium
@@ -202,7 +202,7 @@ fun EyeStudioScreen(
 
                         // Floating instruction HUD
                         Text(
-                            text = "Touch and drag anywhere to direct gaze",
+                            text = "Drag to preview touch tracking",
                             style = MaterialTheme.typography.labelSmall,
                             color = TextTertiary,
                             modifier = Modifier

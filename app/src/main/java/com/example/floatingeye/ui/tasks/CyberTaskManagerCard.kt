@@ -322,7 +322,7 @@ fun CyberTaskManagerCard(
                             color = TextSecondary
                         )
                         Text(
-                            text = "Tap 'New Task' to schedule a reminder with date & time.",
+                            text = "Tap New Task to add a reminder.",
                             style = MaterialTheme.typography.labelSmall,
                             color = TextTertiary
                         )
@@ -646,7 +646,7 @@ fun CreateTaskDialog(
                     color = CyanNeonPrimary
                 )
                 Text(
-                    text = "Set title, date, and time for HIRIS to fire an alarm notification.",
+                    text = "Add a title, date, and time for your reminder.",
                     style = MaterialTheme.typography.labelSmall,
                     color = TextSecondary
                 )

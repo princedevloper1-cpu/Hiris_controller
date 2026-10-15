@@ -407,7 +407,7 @@ fun CyberBluetoothMicCard(
 
                             if (!isPlaying) {
                                 Text(
-                                    text = "Microphone inactive • Tap START below to begin speaking",
+                                    text = "Mic off · Tap Start to speak",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = TextTertiary,
                                     modifier = Modifier
@@ -537,7 +537,7 @@ fun CyberBluetoothMicCard(
                                 modifier = Modifier.size(18.dp)
                             )
                             Text(
-                                text = "When the Floating (+) widget is active on screen, tap it to reveal the floating mic icon to play/stop anytime!",
+                                text = "With the floating eye active, tap it to open mic controls.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextSecondary
                             )

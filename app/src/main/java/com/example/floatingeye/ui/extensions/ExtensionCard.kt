@@ -47,6 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -201,7 +202,11 @@ fun ExtensionCard(
                     Switch(
                         checked = extension.isActive,
                         onCheckedChange = onToggleActive,
-                        modifier = Modifier.testTag("toggle_${extension.id}"),
+                        modifier = Modifier
+                            .testTag("toggle_${extension.id}")
+                            .graphicsLayer {
+                                scaleX = 0.9f
+                            },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = CyanNeonPrimary,
@@ -214,16 +219,14 @@ fun ExtensionCard(
                     IconButton(
                         onClick = onOpenSettings,
                         modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF142034))
+                            .size(36.dp)
                             .testTag("settings_${extension.id}")
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Settings,
                             contentDescription = "Configure ${extension.name}",
                             tint = if (extension.isActive) CyanNeonPrimary else TextTertiary,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
