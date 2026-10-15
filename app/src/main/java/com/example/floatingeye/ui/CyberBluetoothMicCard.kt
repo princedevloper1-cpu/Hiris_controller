@@ -508,8 +508,8 @@ fun CyberBluetoothMicCard(
                         Slider(
                             value = gain,
                             onValueChange = { micController.setGain(it) },
-                            valueRange = 0.5f..3.5f,
-                            steps = 6,
+                                valueRange = 0.5f..2.0f,
+                                steps = 5,
                             colors = SliderDefaults.colors(
                                 thumbColor = CyanNeonPrimary,
                                 activeTrackColor = CyanNeonPrimary,

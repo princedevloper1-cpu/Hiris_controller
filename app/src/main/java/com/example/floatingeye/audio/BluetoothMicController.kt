@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 enum class MicOutputRoute(val label: String) {
@@ -74,7 +76,7 @@ class BluetoothMicController private constructor(private val appContext: Context
     )
     val selectedOutputRoute: StateFlow<MicOutputRoute> = _selectedOutputRoute.asStateFlow()
 
-    private val _micGain = MutableStateFlow(1.5f)
+    private val _micGain = MutableStateFlow(1.0f)
     val micGain: StateFlow<Float> = _micGain.asStateFlow()
 
     private val _isMuted = MutableStateFlow(false)
@@ -194,7 +196,7 @@ class BluetoothMicController private constructor(private val appContext: Context
     }
 
     fun setGain(gain: Float) {
-        _micGain.value = gain.coerceIn(0.5f, 3.5f)
+        _micGain.value = gain.coerceIn(MIN_MIC_GAIN, MAX_MIC_GAIN)
     }
 
     fun toggleMute() {
@@ -326,15 +328,13 @@ class BluetoothMicController private constructor(private val appContext: Context
                         val muted = _isMuted.value
 
                         for (i in 0 until read) {
-                            val sample = buffer[i]
-                            sumSq += (sample.toDouble() * sample.toDouble())
-
                             if (muted) {
                                 buffer[i] = 0
-                            } else if (currentGain != 1.0f) {
-                                val boosted = (sample * currentGain).toInt()
-                                buffer[i] = boosted.coerceIn(-32768, 32767).toShort()
+                            } else {
+                                buffer[i] = limitSample(buffer[i], currentGain)
                             }
+                            val outputSample = buffer[i].toDouble()
+                            sumSq += outputSample * outputSample
                         }
 
                         // RMS Amplitude calculation for UI visualizer
@@ -360,6 +360,23 @@ class BluetoothMicController private constructor(private val appContext: Context
             _errorMessage.value = "Audio connection error: ${e.message}"
             return false
         }
+    }
+
+    /** Compresses peaks smoothly so high gain does not hard-clip the PCM stream. */
+    private fun limitSample(input: Short, gain: Float): Short {
+        val driven = input.toDouble() * gain / Short.MAX_VALUE
+        val magnitude = abs(driven)
+        val threshold = LIMITER_THRESHOLD
+        val limitedMagnitude = if (magnitude <= threshold) {
+            magnitude
+        } else {
+            val excess = magnitude - threshold
+            threshold + (1.0 - threshold) * (excess / (excess + (1.0 - threshold)))
+        }
+        val limited = if (driven < 0.0) -limitedMagnitude else limitedMagnitude
+        return (limited * Short.MAX_VALUE).roundToInt()
+            .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+            .toShort()
     }
 
     @Synchronized
@@ -458,6 +475,9 @@ class BluetoothMicController private constructor(private val appContext: Context
 
     companion object {
         private const val KEY_OUTPUT_ROUTE = "selected_output_route"
+        private const val MIN_MIC_GAIN = 0.5f
+        private const val MAX_MIC_GAIN = 2.0f
+        private const val LIMITER_THRESHOLD = 0.82
         @Volatile
         private var instance: BluetoothMicController? = null
 
